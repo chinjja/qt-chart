@@ -35,11 +35,11 @@ private:
     bool drawLine;
     bool gesture;
     int mouse;
-    QPoint start_point;
-    QPoint end_point;
     bool touch;
     bool zoom;
     bool grid;
+    QPoint start_point;
+    QPoint end_point;
     QRect area;
     vector<RenderChangeListener*> listeners;
 
@@ -74,7 +74,16 @@ private:
         return (tl.x() < br.x() && tl.y() < br.y());
     }
 public:
-    XYRender() : domain(0), range(0), series(0), touch(false), zoom(false), grid(true) {}
+    XYRender(bool _drawShape = true, bool _drawLine = true) :
+        domain(0),
+        range(0),
+        series(0),
+        drawShape(_drawShape),
+        drawLine(_drawLine),
+        gesture(false),
+        touch(false),
+        zoom(false),
+        grid(true) {}
     void setDomainAxis(Axis* axis, Pos pos = BOTTOM) {
         setAxis(&domain, axis, pos);
     }
@@ -302,7 +311,7 @@ protected:
         }
     }
     void drawSeries(QPainter* g, int x, int y, int w, int h) {
-        int count = series->getCount();
+        size_t count = series->getCount();
         if(count == 0) return;
 
         g->setClipRect(x, y, w, h);
