@@ -343,7 +343,7 @@ protected:
 
         QLineF line;
         if(isDrawLine()) {
-            for(int i = 0; i < count; i++) {
+            for(size_t i = 0; i < count; i++) {
                 XYItem item = series->getItem(i);
 
                 if(i == 0) continue;
@@ -360,7 +360,7 @@ protected:
         QRectF shape(-3, -3, 6, 6);
         g->setBrush(QBrush(Qt::red));
         if(isDrawShape()) {
-            for(int i = 0; i < count; i++) {
+            for(size_t i = 0; i < count; i++) {
                 XYItem item = series->getItem(i);
                 double x2 = domain->value_to_point(item.x(), area, domain_pos);
                 double y2 = range->value_to_point(item.y(), area, range_pos);
