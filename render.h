@@ -496,10 +496,10 @@ protected:
             g->drawText(text_x, text_y, str);
         }
     }
-    void onAxisChanged(const AxisChangeEvent* event) {
+    void onAxisChanged(const AxisChangeEvent*) {
         fire();
     }
-    void onSeriesChanged(const SeriesChangeEvent* event) {
+    void onSeriesChanged(const SeriesChangeEvent*) {
         fire();
     }
 

@@ -83,7 +83,7 @@ public:
     int indexOf(double x) const {
         for(size_t i = 0; i < items.size(); i++) {
             if(items[i].x() == x) {
-                return i;
+                return (int)i;
             }
         }
         return -1;

@@ -29,7 +29,8 @@ SOURCES += \
     axis.cpp \
     range.cpp \
     series.cpp \
-    render.cpp
+    render.cpp \
+    mainwindow.cpp
 
 HEADERS += \
         chart.h \
@@ -37,7 +38,8 @@ HEADERS += \
     range.h \
     type.h \
     series.h \
-    render.h
+    render.h \
+    mainwindow.h
 
 FORMS += \
-        chart.ui
+    mainwindow.ui

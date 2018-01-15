@@ -16,9 +16,6 @@
 
 using namespace std;
 
-namespace Ui {
-class Chart;
-}
 
 class Chart : public QWidget, public RenderChangeListener
 {
@@ -35,13 +32,10 @@ public:
     void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
 
-public Q_SLOTS:
-    void onTimer();
 protected:
     void paintEvent(QPaintEvent *event) override;
 private:
     XYRender* render;
-    Ui::Chart* ui;
 };
 
 #endif // CHART_H

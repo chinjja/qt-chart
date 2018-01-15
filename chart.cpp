@@ -1,17 +1,13 @@
 #include "chart.h"
-#include "ui_chart.h"
 
 Chart::Chart(QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::Chart)
+    QWidget(parent)
 {
-    ui->setupUi(this);
 
 }
 
 Chart::~Chart()
 {
-    delete ui;
 }
 void Chart::setRender(XYRender* render) {
     this->render = render;
@@ -20,11 +16,11 @@ void Chart::setRender(XYRender* render) {
 XYRender* Chart::getRender() const {
     return render;
 }
-void Chart::onRenderChanged(const RenderChangeEvent* event) {
+void Chart::onRenderChanged(const RenderChangeEvent*) {
     this->repaint();
 }
 
-void Chart::paintEvent(QPaintEvent *event) {
+void Chart::paintEvent(QPaintEvent *) {
     if(render) {
         QPainter painter(this);
         render->paint(&painter, this);
