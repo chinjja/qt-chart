@@ -185,7 +185,7 @@ public:
 
         if(mouse == Qt::LeftButton && gesture) {
             QPoint tl = this->start_point;
-            QPoint br = this->end_point;
+            QPoint br = this->end_point - QPoint(1, 1);
             drawGesture(g, tl, br);
         }
     }
@@ -207,28 +207,43 @@ public:
         range->setRange(series->getMinY(), series->getMaxY(), false);
         fire();
     }
+    void checkLimit(QPoint& point) {
+        if(point.x() < area.x()) {
+            point.setX(area.x());
+        }
+        if(point.y() < area.y()) {
+            point.setY(area.y());
+        }
+        if(point.x() > area.x() + area.width()) {
+            point.setX(area.x() + area.width());
+        }
+        if(point.y() > area.y() + area.height()) {
+            point.setY(area.y() + area.height());
+        }
+    }
     void startGesture(int button, QPoint point) {
         if(touch) return;
         touch = true;
         gesture = false;
         mouse = button;
         start_point = point;
+        checkLimit(start_point);
     }
     void updateGesture(QPoint point) {
         if(!touch) return;
         end_point = point;
+        checkLimit(end_point);
         if(!gesture && sqrt(QPointF::dotProduct(start_point, end_point)) > 15) {
             gesture = true;
         }
         if(!gesture) return;
         switch(mouse) {
         case Qt::LeftButton:
-            end_point = point;
             fire();
             break;
         case Qt::MiddleButton:
-            adjustPan(start_point, point);
-            start_point = point;
+            adjustPan(start_point, end_point);
+            start_point = end_point;
             break;
         }
     }
@@ -236,16 +251,18 @@ public:
         if(!touch) return;
         gesture = false;
         touch = false;
+        end_point = point;
+        checkLimit(end_point);
         switch(mouse) {
         case Qt::LeftButton:
-            if(isPositive(start_point, point)) {
-                adjustAxisRange(start_point, point);
+            if(isPositive(start_point, end_point)) {
+                adjustAxisRange(start_point, end_point);
             } else {
                 resetAllAxisRange();
             }
             break;
         case Qt::MiddleButton:
-            adjustPan(start_point, point);
+            adjustPan(start_point, end_point);
             break;
         }
 
