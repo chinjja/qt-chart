@@ -40,6 +40,7 @@ private slots:
     void on_invert_y_stateChanged(int arg1);
     void on_pos_x_currentTextChanged(const QString &arg1);
     void on_pos_y_currentTextChanged(const QString &arg1);
+    void on_drawGrid_stateChanged(int arg1);
 };
 
 #endif // MAINWINDOW_H

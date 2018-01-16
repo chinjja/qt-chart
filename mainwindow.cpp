@@ -108,3 +108,8 @@ void MainWindow::on_pos_y_currentTextChanged(const QString &arg1)
         render->setRangeAxis(range, Pos::LEFT);
     }
 }
+
+void MainWindow::on_drawGrid_stateChanged(int arg1)
+{
+    render->setDrawGrid(ui->drawGrid->isChecked());
+}

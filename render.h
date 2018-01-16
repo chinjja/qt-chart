@@ -113,7 +113,15 @@ public:
     bool isDrawShape() {
         return drawShape;
     }
-
+    void setDrawGrid(bool grid) {
+        if(this->grid != grid) {
+            this->grid = grid;
+            fire();
+        }
+    }
+    bool isDrawGrid() const {
+        return grid;
+    }
     void paint(QPainter *g, QWidget* widget) {
         bool has_top = hasPos(TOP);
         bool has_bottom = hasPos(BOTTOM);
@@ -379,20 +387,34 @@ protected:
     void drawBackground(QPainter* g, int x, int y, int w, int h) {
         g->fillRect(x, y, w, h, Qt::white);
     }
-    void setDrawGrid(bool grid) {
-        if(this->grid != grid) {
-            this->grid = grid;
-            fire();
-        }
-    }
-    bool isDrawGrid() const {
-        return grid;
+    double mod(double v1, double v2) const {
+        int div = v1 / v2;
+        return v1 - (v2 * div);
     }
     void drawAxis(QPainter* g, Axis* axis, Pos pos, int x, int y, int w, int h) {
         int tick_size = 5;
 
         g->setPen(Qt::yellow);
         g->drawRect(x, y, w, h);
+
+        QPen pen;
+        pen.setWidth(1.5);
+        pen.setColor(Qt::black);
+        g->setPen(pen);
+        switch(pos) {
+        case TOP:
+            g->drawLine(QLineF(x, y+h, x+w, y+h));
+            break;
+        case BOTTOM:
+            g->drawLine(QLineF(x, y, x+w, y));
+            break;
+        case LEFT:
+            g->drawLine(QLineF(x+w, y, x+w, y+h));
+            break;
+        case RIGHT:
+            g->drawLine(QLineF(x, y, x, y+h));
+            break;
+        }
 
         int size = 10;
         Range axis_range = axis->getRange();
@@ -414,8 +436,8 @@ protected:
             tick_value = floor(tick_value);
             tick_value /= pow(10, abs(fraction));
         }
-        QLine line;
-        g->setPen(Qt::gray);
+        QLine grid_line;
+        QLine tick_line;
 
         double tick_min;
         double tick_max;
@@ -430,59 +452,13 @@ protected:
                 tick_max += tick_value;
             }
         } else {
-            //double d = axis_min % tick_value;
-            double d = axis_min;
-            if(d > 0) {
-                while(d > tick_value) {
-                    d -= tick_value;
-                }
-            } else {
-                while(d < tick_value) {
-                    d += tick_value;
-                }
-            }
+            double d = mod(axis_min, tick_value);
             tick_min = axis_min - d;
-            tick_max = axis_max;
+            tick_max = axis_max - d;
         }
         for(double tick = tick_min; tick <= tick_max; tick += tick_value) {
             double point = axis->value_to_point(tick, area, pos);
 
-            QFontMetrics fm = g->fontMetrics();
-            QString str = QString::number(tick, 'g', 4);
-
-            int str_width = fm.width(str);
-            int str_ascent = fm.ascent();
-            int str_descent = fm.descent();
-            float text_x, text_y;
-            double yy;
-            switch(pos) {
-            case BOTTOM:
-                yy = isDrawGrid() ? area.y() : y;
-                line.setLine(point, yy, point, y+tick_size);
-                text_x = (float)point - str_width/2;
-                text_y = y+h - str_descent;
-                break;
-            case LEFT:
-                yy = isDrawGrid() ? x+w+area.width() : x+w;
-                line.setLine(x+w-tick_size, point, yy, point);
-                text_x = x;
-                text_y = (float)point + str_descent;
-                break;
-            case TOP:
-                yy = isDrawGrid() ? y+h+area.height() : y+h;
-                line.setLine(point, yy, point, y+h-tick_size);
-                text_x = (float)point - str_width/2;
-                text_y = y+str_ascent;
-                break;
-            case RIGHT:
-                yy = isDrawGrid() ? area.x() : x;
-                line.setLine(yy, point, x+tick_size, point);
-                text_x = x + w - str_width;
-                text_y = (float)point + str_descent;
-                break;
-            default:
-                throw 1;
-            }
             switch(pos) {
             case BOTTOM:
             case TOP:
@@ -495,7 +471,54 @@ protected:
             default:
                 throw 1;
             }
-            g->drawLine(line);
+
+            QFontMetrics fm = g->fontMetrics();
+            QString str = QString::number(tick);
+
+            int str_width = fm.width(str);
+            int str_ascent = fm.ascent();
+            int str_descent = fm.descent();
+            float text_x, text_y;
+            if(isDrawGrid()) {
+                switch(pos) {
+                case TOP:
+                case BOTTOM:
+                    grid_line.setLine(point, area.y(), point, area.y()+area.height());
+                    break;
+                case LEFT:
+                case RIGHT:
+                    grid_line.setLine(area.x(), point, area.x()+area.width(), point);
+                    break;
+                }
+                g->setPen(Qt::gray);
+                g->drawLine(grid_line);
+            }
+
+            switch(pos) {
+            case BOTTOM:
+                tick_line.setLine(point, y, point, y+tick_size);
+                text_x = (float)point - str_width/2;
+                text_y = y+h - str_descent;
+                break;
+            case LEFT:
+                tick_line.setLine(x+w-tick_size, point, x+w, point);
+                text_x = x;
+                text_y = (float)point + str_descent;
+                break;
+            case TOP:
+                tick_line.setLine(point, y+h, point, y+h-tick_size);
+                text_x = (float)point - str_width/2;
+                text_y = y+str_ascent;
+                break;
+            case RIGHT:
+                tick_line.setLine(x, point, x+tick_size, point);
+                text_x = x + w - str_width;
+                text_y = (float)point + str_descent;
+                break;
+            }
+            g->setPen(pen);
+            g->drawLine(tick_line);
+            g->setPen(Qt::black);
             g->drawText(text_x, text_y, str);
         }
     }

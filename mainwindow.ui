@@ -85,6 +85,16 @@
           </property>
          </widget>
         </item>
+        <item>
+         <widget class="QCheckBox" name="drawGrid">
+          <property name="text">
+           <string>Draw Grid</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
        </layout>
       </item>
      </layout>
@@ -97,7 +107,7 @@
      <x>0</x>
      <y>0</y>
      <width>974</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>
