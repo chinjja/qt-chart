@@ -455,8 +455,7 @@ protected:
             case RIGHT:
                 if(point < y || point > y + h) continue;
                 break;
-            default:
-                throw 1;
+            default: throw 1;
             }
 
             QFontMetrics fm = g->fontMetrics();
@@ -503,6 +502,7 @@ protected:
                 text_x = x + text_offset;
                 text_y = (float)point + str_descent;
                 break;
+            default: throw 1;
             }
             g->setPen(pen);
             g->drawLine(tick_line);
