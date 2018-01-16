@@ -1,6 +1,7 @@
 #ifndef RENDER_H
 #define RENDER_H
 
+#include <QtDebug>
 #include <QWidget>
 #include <QPainter>
 #include "axis.h"
@@ -25,7 +26,7 @@ public:
 
 class XYRender : public SeriesChangeListener, AxisChangeListener{
 public:
-    constexpr static double AXIS_PADDING = 40;
+    constexpr static double AXIS_PADDING = 50;
 
 private:
     Axis* domain;
@@ -388,7 +389,7 @@ protected:
         g->fillRect(x, y, w, h, Qt::white);
     }
     double mod(double v1, double v2) const {
-        int div = v1 / v2;
+        double div = floor(v1 / v2);
         return v1 - (v2 * div);
     }
     void drawAxis(QPainter* g, Axis* axis, Pos pos, int x, int y, int w, int h) {
@@ -421,42 +422,28 @@ protected:
         double axis_min = axis_range.min();
         double axis_max = axis_range.max();
         double delta_value = axis_range.delta();
-        double tick_value;
+        double tick_value = delta_value / size;
 
         int fraction = 0;
-        if(delta_value >= 10) {
-            tick_value = delta_value / size;
-            tick_value = floor(tick_value);
-        } else {
-            tick_value = delta_value / size;
-            while(tick_value < 1) {
-                tick_value *= 10;
-                fraction++;
-            }
-            tick_value = floor(tick_value);
-            tick_value /= pow(10, abs(fraction));
+
+        double l = log10(tick_value);
+        if(l < 0) {
+            l = abs(floor(l));
+            tick_value *= pow(10, l);
+
+            fraction = l;
         }
+        tick_value = floor(tick_value);
+        tick_value /= pow(10, abs(fraction));
+
         QLine grid_line;
         QLine tick_line;
 
-        double tick_min;
-        double tick_max;
-        bool has_zero = axis_range.inside(0);
-        if(has_zero) {
-            tick_min = 0;
-            tick_max = 0;
-            while(tick_min > axis_min) {
-                tick_min -= tick_value;
-            }
-            while(tick_max < axis_max) {
-                tick_max += tick_value;
-            }
-        } else {
-            double d = mod(axis_min, tick_value);
-            tick_min = axis_min - d;
-            tick_max = axis_max - d;
-        }
-        for(double tick = tick_min; tick <= tick_max; tick += tick_value) {
+        double m = mod(axis_min, tick_value);
+        double tick_min = axis_min - m;
+        double tick_max = axis_max - m;
+
+        for(double tick = tick_min; tick <= tick_max + tick_value / 2; tick += tick_value) {
             double point = axis->value_to_point(tick, area, pos);
 
             switch(pos) {
@@ -473,7 +460,7 @@ protected:
             }
 
             QFontMetrics fm = g->fontMetrics();
-            QString str = QString::number(tick);
+            QString str = QString::number(tick, 'f', fraction);
 
             int str_width = fm.width(str);
             int str_ascent = fm.ascent();

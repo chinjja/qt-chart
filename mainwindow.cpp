@@ -7,11 +7,8 @@ double delta = 2*pi / 200;
 int i = 0;
 
 void MainWindow::onTimer() {
-     std::cout << i << ", " << delta * i << endl;
-
     render->getSeries()->add(i/100.0, sin(delta*i));
     i++;
-
 }
 
 MainWindow::MainWindow(QWidget *parent) :
