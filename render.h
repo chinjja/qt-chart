@@ -481,25 +481,26 @@ protected:
                 g->drawLine(grid_line);
             }
 
+            double text_offset = tick_size + 8;
             switch(pos) {
             case BOTTOM:
                 tick_line.setLine(point, y, point, y+tick_size);
                 text_x = (float)point - str_width/2;
-                text_y = y+h - str_descent;
+                text_y = y+str_ascent+text_offset;
                 break;
             case LEFT:
                 tick_line.setLine(x+w-tick_size, point, x+w, point);
-                text_x = x;
+                text_x = x+w-str_width-text_offset;
                 text_y = (float)point + str_descent;
                 break;
             case TOP:
                 tick_line.setLine(point, y+h, point, y+h-tick_size);
                 text_x = (float)point - str_width/2;
-                text_y = y+str_ascent;
+                text_y = y+h-text_offset-str_descent;
                 break;
             case RIGHT:
                 tick_line.setLine(x, point, x+tick_size, point);
-                text_x = x + w - str_width;
+                text_x = x + text_offset;
                 text_y = (float)point + str_descent;
                 break;
             }
