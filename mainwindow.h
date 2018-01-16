@@ -4,8 +4,14 @@
 #include <QMainWindow>
 #include <iostream>
 #include <QTimer>
+#include <QtCharts/QValueAxis>
+#include <QtCharts/QXYSeries>
+#include <QtCharts/QChart>
+#include <QtCharts/QChartView>
 
 #include "chart.h"
+
+QT_CHARTS_USE_NAMESPACE
 
 namespace Ui {
 class MainWindow;
@@ -29,6 +35,11 @@ private:
     QTimer timer;
     QStringList pos_x_list;
     QStringList pos_y_list;
+
+    QXYSeries *series2;
+    QChart *chart2;
+    QChartView *chart_view2;
+
 public Q_SLOTS:
     void onTimer();
 private slots:

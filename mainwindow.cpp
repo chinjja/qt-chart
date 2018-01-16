@@ -1,17 +1,19 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include <QtWidgets/QGesture>
+#include <QtWidgets/QGraphicsScene>
+#include <QtWidgets/QGraphicsView>
 
+#include <QtCharts/QLineSeries>
 double pi = 3.1415926535897;
 double delta = 2*pi / 200;
 int i = 0;
 
 void MainWindow::onTimer() {
-     std::cout << i << ", " << delta * i << endl;
-
     render->getSeries()->add(i/100.0, sin(delta*i));
+    series2->append(i/100.0, sin(delta*i));
     i++;
-
 }
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -38,6 +40,20 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->horizontalLayout->addWidget(chart, 1);
 
+    series2 = new QLineSeries();
+
+    chart2 = new QChart();
+    chart2->setTitle("hello world");
+    chart2->legend()->hide();
+    chart2->addSeries(series2);
+    chart2->createDefaultAxes();
+    chart2->setTheme(QChart::ChartThemeDark);
+
+    chart_view2 = new QChartView(chart2);
+    chart_view2->setRenderHint(QPainter::Antialiasing);
+
+    ui->horizontalLayout->addWidget(chart_view2, 1);
+
     timer.setInterval(100);
     timer.start(100);
 
@@ -50,6 +66,7 @@ MainWindow::MainWindow(QWidget *parent) :
     pos_y_list.append("LEFT");
     pos_y_list.append("RIGHT");
     ui->pos_y->addItems(pos_y_list);
+
 }
 
 MainWindow::~MainWindow()
