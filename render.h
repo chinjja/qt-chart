@@ -84,6 +84,7 @@ public:
         touch(false),
         zoom(false),
         grid(true) {}
+    virtual ~XYRender() {}
     void setDomainAxis(Axis* axis, Pos pos = BOTTOM) {
         setAxis(&domain, axis, pos);
     }
@@ -119,9 +120,10 @@ public:
         bool has_left = hasPos(LEFT);
         bool has_right = hasPos(RIGHT);
 
-        g->setRenderHint(QPainter::Antialiasing, true);
+        g->setRenderHint(QPainter::Antialiasing);
         Insets insets(10, 10, 10, 10);
-
+        g->setPen(Qt::black);
+        g->drawRect(0, 0, widget->width(), widget->height());
         int x = insets.left;
         if(has_left) {
             x += AXIS_PADDING;
@@ -190,7 +192,8 @@ public:
         }
     }
     void drawGesture(QPainter* g, QPoint tl, QPoint br) {
-        g->setBrush(QBrush(QColor(0, 0, 255, 100)));
+        g->setPen(Qt::NoPen);
+        g->setBrush(QColor(0, 0, 255, 100));
         if(isPositive(tl, br)) {
             g->drawRect(QRect(tl, br));
         }
@@ -353,11 +356,11 @@ protected:
                 double x2 = domain->value_to_point(item.x(), area, domain_pos);
                 double y2 = range->value_to_point(item.y(), area, range_pos);
                 line.setLine(x1, y1, x2, y2);
-                //if(!g.hit(area, line, true)) continue;
                 g->drawLine(line);
             }
         }
         QRectF shape(-3, -3, 6, 6);
+        g->setPen(Qt::NoPen);
         g->setBrush(QBrush(Qt::red));
         if(isDrawShape()) {
             for(size_t i = 0; i < count; i++) {
