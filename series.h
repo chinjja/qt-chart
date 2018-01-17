@@ -28,20 +28,20 @@ public:
 
 class XYItem {
 private:
-    double _x;
-    double _y;
+    qreal _x;
+    qreal _y;
 
 public:
-    XYItem(double x, double y) : _x(x), _y(y) {
+    XYItem(qreal x, qreal y) : _x(x), _y(y) {
 
     }
     bool operator < (XYItem& other) const {
         return _x < other._x;
     }
-    double x() const {
+    qreal x() const {
         return _x;
     }
-    double y() const {
+    qreal y() const {
         return _y;
     }
 };
@@ -52,10 +52,10 @@ private:
     vector<XYItem> items;
     QString name;
     bool sorted;
-    double min_x;
-    double max_x;
-    double min_y;
-    double max_y;
+    qreal min_x;
+    qreal max_x;
+    qreal min_y;
+    qreal max_y;
 
 public:
     XYSeries(QString _name, bool _sorted = true)
@@ -82,10 +82,10 @@ public:
         updateMinMin(item);
         if(notify) fire();
     }
-    void add(double x, double y, bool notify = true) {
+    void add(qreal x, qreal y, bool notify = true) {
         add(XYItem(x, y), notify);
     }
-    int indexOf(double x) const {
+    int indexOf(qreal x) const {
         for(size_t i = 0; i < items.size(); i++) {
             if(items[i].x() == x) {
                 return (int)i;
@@ -124,16 +124,16 @@ public:
     QString getName() const {
         return name;
     }
-    double getMinX() const {
+    qreal getMinX() const {
         return min_x;
     }
-    double getMaxX() const {
+    qreal getMaxX() const {
         return max_x;
     }
-    double getMinY() const {
+    qreal getMinY() const {
         return min_y;
     }
-    double getMaxY() const {
+    qreal getMaxY() const {
         return max_y;
     }
     size_t getCount() const {
@@ -153,10 +153,10 @@ public:
     }
 private:
     void clearLimit() {
-        min_x = numeric_limits<double>::max();
-        max_x = numeric_limits<double>::min();
-        min_y = numeric_limits<double>::max();
-        max_y = numeric_limits<double>::min();
+        min_x = numeric_limits<qreal>::max();
+        max_x = numeric_limits<qreal>::min();
+        min_y = numeric_limits<qreal>::max();
+        max_y = numeric_limits<qreal>::min();
     }
 };
 

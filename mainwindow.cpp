@@ -2,8 +2,8 @@
 #include "ui_mainwindow.h"
 
 
-double pi = 3.1415926535897;
-double delta = 2*pi / 200;
+qreal pi = 3.1415926535897;
+qreal delta = 2*pi / 200;
 int i = 0;
 
 void MainWindow::onTimer() {

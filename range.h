@@ -1,36 +1,37 @@
 #ifndef RANGE_H
 #define RANGE_H
 
+#include <QtCore>
 
 class Range {
 private:
-    double _min;
-    double _max;
+    qreal _min;
+    qreal _max;
 
 public:
-    Range(double min, double max)
+    Range(qreal min, qreal max)
         : _min(min), _max(max) {
         if(_min > _max) throw 1;
     }
-    double min() const {
+    qreal min() const {
         return _min;
     }
-    double max() const {
+    qreal max() const {
         return _max;
     }
-    double delta() const {
+    qreal delta() const {
         return _max - _min;
     }
-    bool inside(double v) const {
+    bool inside(qreal v) const {
         return v >= _min && v <= _max;
     }
-    bool outside(double v) const {
+    bool outside(qreal v) const {
         return !inside(v);
     }
     bool operator == (Range& other) {
         return _min == other._min && _max == other._max;
     }
-    Range operator *(double rate) {
+    Range operator *(qreal rate) {
         return Range(_min * rate, _max * rate);
     }
 };

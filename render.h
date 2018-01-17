@@ -36,10 +36,10 @@ public:
 
 class XYRender : public SeriesChangeListener, AxisChangeListener{
 public:
-    constexpr static double TICK_HEIGHT = 5;
-    constexpr static double GAP = 8;
-    constexpr static double TICK_DIV = 10;
-
+    constexpr static qreal TICK_HEIGHT = 5;
+    constexpr static qreal GAP = 8;
+    constexpr static qreal TICK_DIV = 10;
+    constexpr static qreal TICK_THICKNESS = 2;
 
 private:
 
@@ -56,7 +56,7 @@ private:
     Pos range_pos;
     QPoint start_point;
     QPoint end_point;
-    QRect area;
+    QRectF area;
     QColor title_color;
     QColor axis_text_color;
     QColor grid_color;
@@ -139,7 +139,7 @@ public:
             holder.series->removeSeriesChangeListener(this);
             delete holder.series;
         }
-         qDebug() << "render destroy";
+        qDebug() << "render destroy";
     }
     void setDomainAxis(Axis* axis, Pos pos = BOTTOM) {
         setAxis(&domain, axis, pos);
@@ -297,32 +297,37 @@ public:
         int pad_right = 0;
 
         g->setRenderHint(QPainter::Antialiasing);
-        Insets insets(10, 10, 10, 10);
+        QMarginsF insets(10, 10, 10, 10);
         g->setPen(Qt::black);
         g->setBrush(bg_color);
         g->drawRect(x, y, width, height);
 
-        int chart_x = x+insets.left;
+        QMargins margin;
+        qreal chart_x = x+insets.left();
         if(has_left) {
             pad_left = calcAxisSize(g, range, Pos::LEFT);
             chart_x += pad_left;
+            margin.setLeft(TICK_THICKNESS);
         }
-        int chart_y = y+insets.top;
+        qreal chart_y = y+insets.top();
         if(has_top) {
             pad_top = calcAxisSize(g, domain, Pos::TOP);
             chart_y += pad_top;
+            margin.setTop(TICK_THICKNESS);
         }
-        int chart_w = width - insets.right - chart_x;
+        qreal chart_w = width - insets.right() - chart_x;
         if(has_right) {
             pad_right = calcAxisSize(g, range, Pos::RIGHT);
             chart_w -= pad_right;
+            margin.setRight(TICK_THICKNESS);
         }
-        int chart_h = height - insets.bottom - chart_y;
+        qreal chart_h = height - insets.bottom() - chart_y;
         if(has_bottom) {
             pad_bottom = calcAxisSize(g, domain, Pos::BOTTOM);
             chart_h -= pad_bottom;
+            margin.setBottom(TICK_THICKNESS);
         }
-        int title_height = 0;
+        qreal title_height = 0;
         if(has_title) {
             g->save();
             g->setFont(title_font);
@@ -341,15 +346,11 @@ public:
 
         area.setRect(chart_x, chart_y, chart_w, chart_h);
 
-        drawBackground(g, chart_x, chart_y, chart_w, chart_h);
+        QRectF chart_window = area + (QMarginsF() + TICK_THICKNESS/2);
+        drawBackground(g, chart_window);
 
         Axis* arr[] = { domain, range };
-        for(Axis* axis : arr) {
-            updateAxisRange(axis, 1.05);
-        }
-        for(SeriesHolder &holder : series_list) {
-            drawSeries(g, holder, chart_x, chart_y, chart_w, chart_h);
-        }
+
         g->setClipRect(x, y, width, height);
         for(Axis* axis : arr) {
             Pos pos = getPos(axis);
@@ -360,14 +361,14 @@ public:
 
             switch(pos) {
             case LEFT:
-                axis_x = x+insets.left;
+                axis_x = x+insets.left();
                 axis_y = chart_y;
                 axis_w = pad_left;
                 axis_h = chart_h;
                 break;
             case TOP:
                 axis_x = chart_x;
-                axis_y = y+insets.top;
+                axis_y = y+insets.top();
                 axis_w = chart_w;
                 axis_h = pad_top;
                 if(has_title) {
@@ -375,7 +376,7 @@ public:
                 }
                 break;
             case RIGHT:
-                axis_x = x+chart_w+insets.left;
+                axis_x = x+chart_w+insets.left();
                 axis_y = chart_y;
                 axis_w = pad_right;
                 axis_h = chart_h;
@@ -388,7 +389,13 @@ public:
                 break;
             default: throw 1;
             }
+            updateAxisRange(axis, 1.05);
             drawAxis(g, axis, pos, axis_x, axis_y, axis_w, axis_h);
+        }
+
+        chart_window -= margin;
+        for(SeriesHolder &holder : series_list) {
+            drawSeries(g, holder, chart_window);
         }
 
         if(mouse == Qt::LeftButton && gesture) {
@@ -410,7 +417,7 @@ public:
     void removeRenderChaggeListener(RenderChangeListener* listener) {
         listeners.erase(find(listeners.begin(), listeners.end(), listener));
     }
-    inline double series_min(XYSeries *series, Pos pos) {
+    inline qreal series_min(XYSeries *series, Pos pos) {
         switch(pos) {
         case TOP:
         case BOTTOM:
@@ -421,7 +428,7 @@ public:
         default: throw 1;
         }
     }
-    inline double series_max(XYSeries *series, Pos pos) {
+    inline qreal series_max(XYSeries *series, Pos pos) {
         switch(pos) {
         case TOP:
         case BOTTOM:
@@ -436,8 +443,8 @@ public:
         if(series_list.empty()) return Range(0, 1);
 
         XYSeries *first = series_list[0].series;
-        double min = series_min(first, pos);
-        double max = series_max(first, pos);
+        qreal min = series_min(first, pos);
+        qreal max = series_max(first, pos);
 
         for(int i = 1; i < series_list.size(); i++) {
             XYSeries *series = series_list[i].series;
@@ -523,12 +530,12 @@ public:
 
     }
     void adjustPan(QPoint tl, QPoint br) {
-        double domain1 = domain->point_to_value(tl.x(), area, getPos(domain));
-        double domain2 = domain->point_to_value(br.x(), area, getPos(domain));
-        double range1 = range->point_to_value(tl.y(), area, getPos(range));
-        double range2 = range->point_to_value(br.y(), area, getPos(range));
-        double d1 = domain2 - domain1;
-        double d2 = range2 - range1;
+        qreal domain1 = domain->point_to_value(tl.x(), area, getPos(domain));
+        qreal domain2 = domain->point_to_value(br.x(), area, getPos(domain));
+        qreal range1 = range->point_to_value(tl.y(), area, getPos(range));
+        qreal range2 = range->point_to_value(br.y(), area, getPos(range));
+        qreal d1 = domain2 - domain1;
+        qreal d2 = range2 - range1;
         Range r1 = domain->getRange();
         Range r2 = range->getRange();
         domain->setRange(r1.min() - d1, r1.max() - d1, false);
@@ -538,33 +545,33 @@ public:
     void adjustAxisRange(QPoint tl, QPoint br) {
         zoom = true;
         if(!isPositive(tl, br)) throw 1;
-        double domain1 = domain->point_to_value(tl.x(), area, getPos(domain));
-        double domain2 = domain->point_to_value(br.x(), area, getPos(domain));
-        double range1 = range->point_to_value(tl.y(), area, getPos(range));
-        double range2 = range->point_to_value(br.y(), area, getPos(range));
-        double min_domain = min(domain1, domain2);
-        double max_domain = max(domain1, domain2);
-        double min_range = min(range1, range2);
-        double max_range = max(range1, range2);
+        qreal domain1 = domain->point_to_value(tl.x(), area, getPos(domain));
+        qreal domain2 = domain->point_to_value(br.x(), area, getPos(domain));
+        qreal range1 = range->point_to_value(tl.y(), area, getPos(range));
+        qreal range2 = range->point_to_value(br.y(), area, getPos(range));
+        qreal min_domain = min(domain1, domain2);
+        qreal max_domain = max(domain1, domain2);
+        qreal min_range = min(range1, range2);
+        qreal max_range = max(range1, range2);
         domain->setRange(min_domain, max_domain, false);
         range->setRange(min_range, max_range, false);
         fire();
     }
 protected:
-    void updateAxisRange(Axis* axis, double rate) {
+    void updateAxisRange(Axis* axis, qreal rate) {
         if(!zoom && axis->isAutoRange()) {
             Pos pos = getPos(axis);
             Range range = calc_range_bound(pos) * rate;
             axis->setRange(range, false);
         }
     }
-    void drawSeries(QPainter* g, SeriesHolder holder, int x, int y, int w, int h) {
+    void drawSeries(QPainter* g, SeriesHolder holder, QRectF window) {
         XYSeries *series = holder.series;
         QColor base_color = holder.color;
         size_t count = series->getCount();
         if(count == 0) return;
 
-        g->setClipRect(x, y, w, h);
+        g->setClipRect(window);
 
         Pos domain_pos = getPos(domain);
         Pos range_pos = getPos(range);
@@ -581,10 +588,10 @@ protected:
 
                 XYItem item = series->getItem(i);
                 XYItem prev = series->getItem(i-1);
-                double x1 = domain->value_to_point(prev.x(), area, domain_pos);
-                double y1 = range->value_to_point(prev.y(), area, range_pos);
-                double x2 = domain->value_to_point(item.x(), area, domain_pos);
-                double y2 = range->value_to_point(item.y(), area, range_pos);
+                qreal x1 = domain->value_to_point(prev.x(), area, domain_pos);
+                qreal y1 = range->value_to_point(prev.y(), area, range_pos);
+                qreal x2 = domain->value_to_point(item.x(), area, domain_pos);
+                qreal y2 = range->value_to_point(item.y(), area, range_pos);
                 line.setLine(x1, y1, x2, y2);
                 g->drawLine(line);
             }
@@ -595,31 +602,33 @@ protected:
         if(isDrawShape()) {
             for(int i = 0; i < count; i++) {
                 XYItem item = series->getItem(i);
-                double x2 = domain->value_to_point(item.x(), area, domain_pos);
-                double y2 = range->value_to_point(item.y(), area, range_pos);
+                qreal x2 = domain->value_to_point(item.x(), area, domain_pos);
+                qreal y2 = range->value_to_point(item.y(), area, range_pos);
                 g->translate(x2, y2);
                 g->drawEllipse(shape);
                 g->translate(-x2, -y2);
             }
         }
     }
-    int scale(double v, double scale, double offset) const {
+    int scale(qreal v, qreal scale, qreal offset) const {
         return (int)(v*scale-offset);
     }
-    void drawBackground(QPainter* g, int x, int y, int w, int h) {
-        g->fillRect(x, y, w, h, chart_color);
+    void drawBackground(QPainter* g, QRectF &rect) {
+        g->setPen(Qt::NoPen);
+        g->setBrush(chart_color);
+        g->drawRect(rect);
     }
-    double mod(double v1, double v2) const {
-        double div = floor(v1 / v2);
+    qreal mod(qreal v1, qreal v2) const {
+        qreal div = floor(v1 / v2);
         return v1 - (v2 * div);
     }
     int calcAxisSize(QPainter* g, Axis *axis, Pos pos) {
         Range axis_range = axis->getRange();
-        double delta_value = axis_range.delta();
-        double tick_value = delta_value / TICK_DIV;
+        qreal delta_value = axis_range.delta();
+        qreal tick_value = delta_value / TICK_DIV;
 
         int fraction = 0;
-        double l = log10(tick_value);
+        qreal l = log10(tick_value);
         if(l < 0) {
             l = abs(floor(l));
             tick_value *= pow(10, l);
@@ -656,19 +665,15 @@ protected:
 
     }
     void drawAxis(QPainter* g, Axis* axis, Pos pos, int x, int y, int w, int h) {
-        QPen pen;
-        pen.setWidth(2);
-        pen.setColor(tick_color);
-
         Range axis_range = axis->getRange();
-        double axis_min = axis_range.min();
-        double axis_max = axis_range.max();
-        double delta_value = axis_range.delta();
-        double tick_value = delta_value / TICK_DIV;
+        qreal axis_min = axis_range.min();
+        qreal axis_max = axis_range.max();
+        qreal delta_value = axis_range.delta();
+        qreal tick_value = delta_value / TICK_DIV;
 
         int fraction = 0;
 
-        double l = log10(tick_value);
+        qreal l = log10(tick_value);
         if(l < 0) {
             l = abs(floor(l));
             tick_value *= pow(10, l);
@@ -678,17 +683,17 @@ protected:
         tick_value = floor(tick_value);
         tick_value /= pow(10, abs(fraction));
 
-        QLine grid_line;
-        QLine tick_line;
+        QLineF grid_line;
+        QLineF tick_line;
 
-        double m = mod(axis_min, tick_value);
-        double tick_min = axis_min - m;
-        double tick_max = axis_max - m;
+        qreal m = mod(axis_min, tick_value);
+        qreal tick_min = axis_min - m;
+        qreal tick_max = axis_max - m;
 
         switch(pos) {
         case TOP:
         case BOTTOM:
-            double tick_width = abs(axis->value_to_point(tick_value, area, pos) - axis->value_to_point(0, area, pos));
+            qreal tick_width = abs(axis->value_to_point(tick_value, area, pos) - axis->value_to_point(0, area, pos));
             QString str2 = QString::number(-1, 'f', fraction);
             int tick_value_width = g->fontMetrics().width(str2) + GAP;
             if(tick_width < tick_value_width) {
@@ -697,9 +702,13 @@ protected:
             break;
         }
 
+        QPen tick_pen;
+        tick_pen.setWidth(TICK_THICKNESS);
+        tick_pen.setColor(tick_color);
         g->setFont(tick_text_font);
-        for(double tick = tick_min; tick <= tick_max + tick_value / 2; tick += tick_value) {
-            double point = axis->value_to_point(tick, area, pos);
+        g->setBrush(Qt::NoBrush);
+        for(qreal tick = tick_min; tick <= tick_max + tick_value / 2; tick += tick_value) {
+            qreal point = axis->value_to_point(tick, area, pos);
 
             switch(pos) {
             case BOTTOM:
@@ -713,13 +722,6 @@ protected:
             default: throw 1;
             }
 
-            QFontMetrics fm = g->fontMetrics();
-            QString str = QString::number(tick, 'f', fraction);
-
-            int str_width = fm.width(str);
-            int str_ascent = fm.ascent();
-            int str_descent = fm.descent();
-            float text_x, text_y;
             if(isDrawGrid()) {
                 switch(pos) {
                 case TOP:
@@ -731,11 +733,19 @@ protected:
                     grid_line.setLine(area.x(), point, area.x()+area.width(), point);
                     break;
                 }
+
                 g->setPen(grid_color);
                 g->drawLine(grid_line);
             }
 
-            double text_offset = TICK_HEIGHT + GAP;
+            QFontMetrics fm = g->fontMetrics();
+            QString str = QString::number(tick, 'f', fraction);
+
+            int str_width = fm.width(str);
+            int str_ascent = fm.ascent();
+            int str_descent = fm.descent();
+            qreal text_x, text_y;
+            qreal text_offset = TICK_HEIGHT + GAP;
             switch(pos) {
             case BOTTOM:
                 tick_line.setLine(point, y, point, y+TICK_HEIGHT);
@@ -759,13 +769,14 @@ protected:
                 break;
             default: throw 1;
             }
-            g->setPen(pen);
+
+            g->setPen(tick_pen);
             g->drawLine(tick_line);
             g->setPen(tick_text_color);
             g->drawText(text_x, text_y, str);
         }
 
-        g->setPen(pen);
+        g->setPen(tick_pen);
         switch(pos) {
         case TOP:
             g->drawLine(QLineF(x, y+h, x+w, y+h));

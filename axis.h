@@ -40,7 +40,7 @@ public:
     Axis(QString _name, Range _range, bool _invert = false) : name(_name), range(_range), auto_range(false), invert(_invert) {
 
     }
-    Axis(QString _name, double min = 0, double max = 1, bool invert = false) : Axis(_name, Range(min, max), invert) {
+    Axis(QString _name, qreal min = 0, qreal max = 1, bool invert = false) : Axis(_name, Range(min, max), invert) {
 
     }
     ~Axis() {
@@ -52,7 +52,7 @@ public:
     void setName(QString name) {
         this->name = name;
     }
-    void setRange(double min, double max, bool notify = true) {
+    void setRange(qreal min, qreal max, bool notify = true) {
         setRange(Range(min, max), notify);
     }
     void setRange(Range range, bool notify = true) {
@@ -63,16 +63,16 @@ public:
     Range getRange() const {
         return range;
     }
-    void setUpper(double upper) {
+    void setUpper(qreal upper) {
         setRange(getLower(), upper);
     }
-    double getUpper() const {
+    qreal getUpper() const {
         return range.max();
     }
-    void setLower(double lower) {
+    void setLower(qreal lower) {
         setRange(lower, getUpper());
     }
-    double getLower() const {
+    qreal getLower() const {
         return range.min();
     }
     void setAutoRange(bool auto_range) {
@@ -93,12 +93,12 @@ public:
     bool isInvert() const {
         return invert;
     }
-    double point_to_value(double point, QRect area, Pos pos) const {
-        double axis_min = range.min();
-        double axis_max = range.max();
+    qreal point_to_value(qreal point, QRectF area, Pos pos) const {
+        qreal axis_min = range.min();
+        qreal axis_max = range.max();
 
-        double area_min;
-        double area_max;
+        qreal area_min;
+        qreal area_max;
 
         bool ivt = isInvert();
 
@@ -115,21 +115,21 @@ public:
             area_max = area.y() + area.height();
             break;
         }
-        double axis_delta = axis_max - axis_min;
-        double area_delta = area_max - area_min;
-        double rate = axis_delta / area_delta;
+        qreal axis_delta = axis_max - axis_min;
+        qreal area_delta = area_max - area_min;
+        qreal rate = axis_delta / area_delta;
         if(ivt) {
             return (area_max - point) * rate + axis_min;
         } else {
             return (point - area_min) * rate + axis_min;
         }
     }
-    double value_to_point(double value, QRect area, Pos pos) const {
-        double axis_min = range.min();
-        double axis_max = range.max();
+    qreal value_to_point(qreal value, QRectF area, Pos pos) const {
+        qreal axis_min = range.min();
+        qreal axis_max = range.max();
 
-        double area_min = 0;
-        double area_max = 0;
+        qreal area_min = 0;
+        qreal area_max = 0;
 
         bool ivt = isInvert();
 
@@ -146,9 +146,9 @@ public:
             area_max = area.y() + area.height();
             break;
         }
-        double axis_delta = axis_max - axis_min;
-        double area_delta = area_max - area_min;
-        double rate =  area_delta / axis_delta;
+        qreal axis_delta = axis_max - axis_min;
+        qreal area_delta = area_max - area_min;
+        qreal rate =  area_delta / axis_delta;
 
         if(ivt) {
             return (axis_max - value) * rate + area_min;
