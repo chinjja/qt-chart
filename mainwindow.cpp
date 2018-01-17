@@ -10,6 +10,13 @@ void MainWindow::onTimer() {
     series->add(i/100.0, sin(delta*i));
     series2->add(i/100.0, cos(delta*i));
     i++;
+    if(i == 50) {
+        render->setSeriesColor(render->indexOf(series), Qt::blue);
+    }
+    if(i > 50) {
+        int v = i % 255;
+        render->setSeriesColor(1, QColor(v, (v + 50) % 255, (v + 100)%255));
+    }
 }
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -31,7 +38,7 @@ MainWindow::MainWindow(QWidget *parent) :
     render->setDomainAxis(domain);
     render->setRangeAxis(range);
     render->addSeries(series);
-    render->addSeries(series2);
+    render->addSeries(series2, Qt::green);
 
     chart = new Chart();
     chart->setRender(render);

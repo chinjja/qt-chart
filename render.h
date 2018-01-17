@@ -4,6 +4,7 @@
 #include <QtDebug>
 #include <QWidget>
 #include <QPainter>
+
 #include "axis.h"
 #include "series.h"
 
@@ -24,6 +25,15 @@ public:
     virtual void onRenderChanged(const RenderChangeEvent* event) = 0;
 };
 
+class SeriesHolder {
+public:
+    XYSeries *series;
+    QColor color;
+
+public:
+    SeriesHolder(XYSeries *_series = nullptr, QColor _color = Qt::red) : series(_series), color(_color) {}
+};
+
 class XYRender : public SeriesChangeListener, AxisChangeListener{
 public:
     constexpr static double TICK_HEIGHT = 5;
@@ -34,7 +44,7 @@ public:
 private:
     Axis* domain;
     Axis* range;
-    QVector<XYSeries*> series_list;
+    QVector<SeriesHolder> series_list;
     bool drawShape;
     bool drawLine;
     bool gesture;
@@ -94,36 +104,60 @@ public:
     void setRangeAxis(Axis* axis, Pos pos = LEFT) {
          setAxis(&range, axis, pos);
     }
-    void addSeries(XYSeries* series) {
+    void addSeries(XYSeries* series, QColor color = Qt::red) {
         if(!series) throw 1;
-        if(series_list.contains(series)) throw 1;
-        series_list.append(series);
+        if(contains(series)) throw 1;
+        SeriesHolder h(series, color);
+        series_list.append(h);
         series->addSeriesChangeListener(this);
         fire();
     }
     void removeSeries(XYSeries* series) {
         if(!series) throw 1;
-        if(series_list.removeOne(series)) {
-            series->removeSeriesChangeListener(this);
-        }
+        int idx = indexOf(series);
+        if(idx == -1) return;
+        series_list.remove(idx);
+        series->removeSeriesChangeListener(this);
         fire();
     }
+    void setSeriesColor(int series, QColor color, bool notify = true) {
+        QColor &prev = series_list[series].color;
+        if(prev != color) {
+            prev = color;
+            if(notify) fire();
+        }
+    }
+    QColor getSeriesColor(int series) const {
+        return series_list[series].color;
+    }
+
     bool contains(XYSeries *series) const {
-        return series_list.contains(series);
+        return indexOf(series) != -1;
+    }
+    int indexOf(XYSeries *series) const {
+        for(int i = 0; i < series_list.size(); i++) {
+            SeriesHolder h = series_list[i];
+            if(h.series == series) return i;
+        }
+        return -1;
     }
     XYSeries* getSeries(int index) const {
-        return series_list[index];
+        return series_list[index].series;
     }
     void setDrawLine(bool line) {
-        this->drawLine = line;
-        fire();
+        if(this->drawLine != line) {
+            this->drawLine = line;
+            fire();
+        }
     }
     bool isDrawLine() {
         return drawLine;
     }
     void setDrawShape(bool shape) {
-        this->drawShape = shape;
-        fire();
+        if(this->drawShape != shape) {
+            this->drawShape = shape;
+            fire();
+        }
     }
     bool isDrawShape() {
         return drawShape;
@@ -215,8 +249,8 @@ public:
             updateAxisRange(axis, 1.05);
             drawAxis(g, axis, pos, axis_x, axis_y, axis_w, axis_h);
         }
-        for(XYSeries *series : series_list) {
-            drawSeries(g, series, x, y, w, h);
+        for(SeriesHolder &holder : series_list) {
+            drawSeries(g, holder, x, y, w, h);
         }
 
         if(mouse == Qt::LeftButton && gesture) {
@@ -241,18 +275,18 @@ public:
     double min_x() {
         if(series_list.empty()) return 0;
 
-        XYSeries *first = series_list[0];
+        XYSeries *first = series_list[0].series;
         double min_x = first->getMinX();
 
         for(int i = 1; i < series_list.size(); i++) {
-            XYSeries *series = series_list[i];
+            XYSeries *series = series_list[i].series;
             if(series->getMinX() < min_x) {
                 min_x = series->getMinX();
             }
         }
         return min_x;
     }
-    double series_min(XYSeries *series, Pos pos) {
+    inline double series_min(XYSeries *series, Pos pos) {
         switch(pos) {
         case TOP:
         case BOTTOM:
@@ -263,7 +297,7 @@ public:
         default: throw 1;
         }
     }
-    double series_max(XYSeries *series, Pos pos) {
+    inline double series_max(XYSeries *series, Pos pos) {
         switch(pos) {
         case TOP:
         case BOTTOM:
@@ -277,12 +311,12 @@ public:
     Range calc_range_bound(Pos pos) {
         if(series_list.empty()) return Range(0, 1);
 
-        XYSeries *first = series_list[0];
+        XYSeries *first = series_list[0].series;
         double min = series_min(first, pos);
         double max = series_max(first, pos);
 
         for(int i = 1; i < series_list.size(); i++) {
-            XYSeries *series = series_list[i];
+            XYSeries *series = series_list[i].series;
             if(series_min(series, pos) < min) {
                 min = series_min(series, pos);
             }
@@ -395,7 +429,9 @@ protected:
             axis->setRange(range, false);
         }
     }
-    void drawSeries(QPainter* g, XYSeries *series, int x, int y, int w, int h) {
+    void drawSeries(QPainter* g, SeriesHolder holder, int x, int y, int w, int h) {
+        XYSeries *series = holder.series;
+        QColor base_color = holder.color;
         size_t count = series->getCount();
         if(count == 0) return;
 
@@ -405,7 +441,7 @@ protected:
         Pos range_pos = getPos(range);
 
         QPen pen;
-        pen.setColor(Qt::red);
+        pen.setColor(base_color);
         pen.setWidthF(1.5);
         g->setPen(pen);
 
@@ -426,7 +462,7 @@ protected:
         }
         QRectF shape(-3, -3, 6, 6);
         g->setPen(Qt::NoPen);
-        g->setBrush(QBrush(Qt::red));
+        g->setBrush(base_color);
         if(isDrawShape()) {
             for(int i = 0; i < count; i++) {
                 XYItem item = series->getItem(i);
