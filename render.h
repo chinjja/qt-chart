@@ -57,14 +57,18 @@ private:
     QPoint start_point;
     QPoint end_point;
     QRect area;
+    QColor title_color;
     QColor grid_color;
     QColor tick_color;
     QColor tick_text_color;
     QColor chart_color;
     QColor bg_color;
 
+    QFont title_font;
     QFont tick_text_font;
     QFont axis_text_font;
+
+    QString title;
 
     QVector<SeriesHolder> series_list;
     QVector<RenderChangeListener*> listeners;
@@ -109,15 +113,18 @@ public:
         touch(false),
         zoom(false),
         grid(true),
+        title_color(Qt::black),
         grid_color(Qt::lightGray),
         tick_color(Qt::black),
         tick_text_color(Qt::black),
         chart_color(Qt::white),
         bg_color(Qt::lightGray),
-        tick_text_font(QFont("Times")),
-        axis_text_font(QFont("Times", 14)),
         domain(0),
-        range(0) {}
+        range(0)
+    {
+        title_font.setPointSize(18);
+        axis_text_font.setPointSize(14);
+    }
     virtual ~XYRender() {}
     void setDomainAxis(Axis* axis, Pos pos = BOTTOM) {
         setAxis(&domain, axis, pos);
@@ -170,6 +177,18 @@ public:
     }
     QColor getSeriesColor(int series) const {
         return series_list[series].color;
+    }
+    void setTitleColor(QColor color, bool notify = true) {
+        set_value(title_color, color, notify);
+    }
+    QColor getTitleColor() const {
+        return title_color;
+    }
+    void setTitleFont(QFont font, bool notify = true) {
+        set_value(title_font, font, notify);
+    }
+    QFont getTitleFont() const {
+        return title_font;
     }
     void setChartColor(QColor color, bool notify = true) {
         set_value(chart_color, color, notify);
@@ -231,6 +250,12 @@ public:
     bool isDrawGrid() const {
         return grid;
     }
+    void setTitle(QString title, bool notify = true) {
+        set_value(this->title, title, notify);
+    }
+    QString getTitle() const {
+        return title;
+    }
     void paint(QPainter *g, QWidget* widget) {
         int x = 0;
         int y = 0;
@@ -239,6 +264,7 @@ public:
 
         if(width < 2 || height < 2) return;
 
+        bool has_title = !title.isEmpty();
         bool has_top = hasPos(TOP);
         bool has_bottom = hasPos(BOTTOM);
         bool has_left = hasPos(LEFT);
@@ -255,26 +281,41 @@ public:
         g->setBrush(bg_color);
         g->drawRect(x, y, width, height);
 
-        int chart_x = insets.left;
+        int chart_x = x+insets.left;
         if(has_left) {
             pad_left = calcAxisSize(g, range, Pos::LEFT);
             chart_x += pad_left;
         }
-        int chart_y = insets.top;
+        int chart_y = y+insets.top;
         if(has_top) {
             pad_top = calcAxisSize(g, domain, Pos::TOP);
             chart_y += pad_top;
         }
-        int chart_w = widget->width() - insets.right - chart_x;
+        int chart_w = width - insets.right - chart_x;
         if(has_right) {
             pad_right = calcAxisSize(g, range, Pos::RIGHT);
             chart_w -= pad_right;
         }
-        int chart_h = widget->height() - insets.bottom - chart_y;
+        int chart_h = height - insets.bottom - chart_y;
         if(has_bottom) {
             pad_bottom = calcAxisSize(g, domain, Pos::BOTTOM);
             chart_h -= pad_bottom;
         }
+        if(has_title) {
+            g->save();
+            g->setFont(title_font);
+            QFontMetrics m = g->fontMetrics();
+            int title_height = m.height() + GAP * 2;
+            int title_x = width/2 - m.width(title)/2;
+            int title_y = y+GAP+m.height();
+            g->setPen(title_color);
+            g->drawText(title_x, title_y, title);
+            g->restore();
+            chart_y += title_height;
+            chart_h -= title_height;
+        }
+
+        if(chart_w < 2 || chart_h < 2) return;
 
         area.setRect(chart_x, chart_y, chart_w, chart_h);
 
@@ -297,19 +338,19 @@ public:
 
             switch(pos) {
             case LEFT:
-                axis_x = insets.left;
+                axis_x = x+insets.left;
                 axis_y = chart_y;
                 axis_w = pad_left;
                 axis_h = chart_h;
                 break;
             case TOP:
                 axis_x = chart_x;
-                axis_y = insets.top;
+                axis_y = y+insets.top;
                 axis_w = chart_w;
                 axis_h = pad_top;
                 break;
             case RIGHT:
-                axis_x = insets.left+chart_w;
+                axis_x = x+chart_w+insets.left;
                 axis_y = chart_y;
                 axis_w = pad_right;
                 axis_h = chart_h;

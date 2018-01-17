@@ -25,6 +25,7 @@ void MainWindow::onTimer() {
     if(i > 50) {
         int v = i % 255;
         render->setSeriesColor(1, QColor(v, (v + 50) % 255, (v + 100)%255));
+        render->setTitle("Chart Test");
     }
 }
 
@@ -44,6 +45,7 @@ MainWindow::MainWindow(QWidget *parent) :
     series2 = new XYSeries("cos");
 
     render = new XYRender();
+
     render->setDomainAxis(domain);
     render->setRangeAxis(range);
     render->addSeries(series);
