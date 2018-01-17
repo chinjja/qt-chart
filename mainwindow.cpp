@@ -1,14 +1,15 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include <QDebug>
 
 qreal pi = 3.1415926535897;
 qreal delta = 2*pi / 200;
 int i = 0;
 
 void MainWindow::onTimer() {
-    series->add(i/100.0, sin(delta*i));
-    series2->add(i/100.0, cos(delta*i));
+    series->add(i/100.0, sin(delta*i)+1);
+    series2->add(i/100.0, cos(delta*i)+1);
     i++;
     if(i == 25) {
         render->setSeriesColor(render->indexOf(series), Qt::blue, false);
@@ -19,6 +20,10 @@ void MainWindow::onTimer() {
         render->setRangeAxis(range, Pos::RIGHT);
         range->setInvert(false);
         render->setGridColor(Qt::darkGreen);
+        render->addSeries(new XYSeries("hello"), Qt::magenta);
+    }
+    if(i > 50) {
+        render->getSeries(2)->add((i-25)/100.0, sin(delta*i));
     }
     if(i == 75) {
         render->setGridColor(Qt::gray);

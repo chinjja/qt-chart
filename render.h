@@ -57,6 +57,7 @@ private:
     QPoint start_point;
     QPoint end_point;
     QRectF area;
+    QMarginsF margins;
     QColor title_color;
     QColor axis_text_color;
     QColor grid_color;
@@ -113,6 +114,7 @@ public:
         touch(false),
         zoom(false),
         grid(true),
+        margins(10, 10, 10, 10),
         title_color(Qt::black),
         axis_text_color(Qt::black),
         grid_color(Qt::lightGray),
@@ -277,11 +279,25 @@ public:
     QString getTitle() const {
         return title;
     }
+    void setMargins(qreal left, qreal top, qreal right, qreal bottom, bool notify = true) {
+        setMargins(QMarginsF(left, top, right, bottom), notify);
+    }
+    void setMargins(QMarginsF margins, bool notify = true) {
+        set_value(this->margins, margins, notify);
+    }
+    QMarginsF getMargins() const {
+        return margins;
+    }
     void paint(QPainter *g, QWidget* widget) {
         int x = 0;
         int y = 0;
         int width = widget->width();
         int height = widget->height();
+
+        g->setRenderHint(QPainter::Antialiasing);
+        g->setPen(Qt::black);
+        g->setBrush(bg_color);
+        g->drawRect(x, y, width, height);
 
         if(width < 2 || height < 2) return;
 
@@ -296,36 +312,30 @@ public:
         int pad_left = 0;
         int pad_right = 0;
 
-        g->setRenderHint(QPainter::Antialiasing);
-        QMarginsF insets(10, 10, 10, 10);
-        g->setPen(Qt::black);
-        g->setBrush(bg_color);
-        g->drawRect(x, y, width, height);
-
-        QMargins margin;
-        qreal chart_x = x+insets.left();
+        QMargins chart_margin;
+        qreal chart_x = x+margins.left();
         if(has_left) {
             pad_left = calcAxisSize(g, range, Pos::LEFT);
             chart_x += pad_left;
-            margin.setLeft(TICK_THICKNESS);
+            chart_margin.setLeft(TICK_THICKNESS);
         }
-        qreal chart_y = y+insets.top();
+        qreal chart_y = y+margins.top();
         if(has_top) {
             pad_top = calcAxisSize(g, domain, Pos::TOP);
             chart_y += pad_top;
-            margin.setTop(TICK_THICKNESS);
+            chart_margin.setTop(TICK_THICKNESS);
         }
-        qreal chart_w = width - insets.right() - chart_x;
+        qreal chart_w = width - margins.right() - chart_x;
         if(has_right) {
             pad_right = calcAxisSize(g, range, Pos::RIGHT);
             chart_w -= pad_right;
-            margin.setRight(TICK_THICKNESS);
+            chart_margin.setRight(TICK_THICKNESS);
         }
-        qreal chart_h = height - insets.bottom() - chart_y;
+        qreal chart_h = height - margins.bottom() - chart_y;
         if(has_bottom) {
             pad_bottom = calcAxisSize(g, domain, Pos::BOTTOM);
             chart_h -= pad_bottom;
-            margin.setBottom(TICK_THICKNESS);
+            chart_margin.setBottom(TICK_THICKNESS);
         }
         qreal title_height = 0;
         if(has_title) {
@@ -361,14 +371,14 @@ public:
 
             switch(pos) {
             case LEFT:
-                axis_x = x+insets.left();
+                axis_x = x+margins.left();
                 axis_y = chart_y;
                 axis_w = pad_left;
                 axis_h = chart_h;
                 break;
             case TOP:
                 axis_x = chart_x;
-                axis_y = y+insets.top();
+                axis_y = y+margins.top();
                 axis_w = chart_w;
                 axis_h = pad_top;
                 if(has_title) {
@@ -376,7 +386,7 @@ public:
                 }
                 break;
             case RIGHT:
-                axis_x = x+chart_w+insets.left();
+                axis_x = x+chart_w+margins.left();
                 axis_y = chart_y;
                 axis_w = pad_right;
                 axis_h = chart_h;
@@ -393,7 +403,7 @@ public:
             drawAxis(g, axis, pos, axis_x, axis_y, axis_w, axis_h);
         }
 
-        chart_window -= margin;
+        chart_window -= chart_margin;
         for(SeriesHolder &holder : series_list) {
             drawSeries(g, holder, chart_window);
         }
@@ -690,12 +700,24 @@ protected:
         qreal tick_min = axis_min - m;
         qreal tick_max = axis_max - m;
 
+        qreal tick_width;
+        int tick_value_width;
+        QString str2;
         switch(pos) {
         case TOP:
         case BOTTOM:
-            qreal tick_width = abs(axis->value_to_point(tick_value, area, pos) - axis->value_to_point(0, area, pos));
-            QString str2 = QString::number(-1, 'f', fraction);
-            int tick_value_width = g->fontMetrics().width(str2) + GAP;
+            tick_width = abs(axis->value_to_point(tick_value, area, pos) - axis->value_to_point(0, area, pos));
+            str2 = QString::number(-1, 'f', fraction);
+            tick_value_width = g->fontMetrics().width(str2) + GAP;
+            if(tick_width < tick_value_width) {
+                tick_value = abs(axis->point_to_value(tick_value_width, area, pos) - axis->point_to_value(0, area, pos));
+            }
+            break;
+        case LEFT:
+        case RIGHT:
+            tick_width = abs(axis->value_to_point(tick_value, area, pos) - axis->value_to_point(0, area, pos));
+
+            tick_value_width = g->fontMetrics().height() + GAP;
             if(tick_width < tick_value_width) {
                 tick_value = abs(axis->point_to_value(tick_value_width, area, pos) - axis->point_to_value(0, area, pos));
             }
