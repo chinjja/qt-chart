@@ -446,7 +446,7 @@ public:
         default: throw 1;
         }
     }
-    Range calc_range_bound(Axis *axis, Pos pos) {
+    Range calc_series_bound(Axis *axis, Pos pos) {
         if(series_list.empty()) return Range(0, 1);
 
         XYSeries *first = series_list[0].series;
@@ -468,8 +468,8 @@ public:
     }
     void resetAllAxisRange() {
         zoom = false;
-        domain->setRange(calc_range_bound(domain, getPos(domain)), false);
-        range->setRange(calc_range_bound(range, getPos(range)), false);
+        domain->setRange(calc_series_bound(domain, getPos(domain)), false);
+        range->setRange(calc_series_bound(range, getPos(range)), false);
         fire();
     }
     void checkLimit(QPoint& point) {
@@ -571,7 +571,7 @@ protected:
         if(!zoom && axis->isAutoRange()) {
             Pos pos = getPos(axis);
 
-            Range range = calc_range_bound(axis, pos);
+            Range range = calc_series_bound(axis, pos);
             if(range.min() == 0) {
                 range = range * rate;
                 range = Range(0, range.max());
@@ -589,7 +589,6 @@ protected:
         QColor base_color = holder.color;
         size_t count = series->getCount();
         if(count == 0) return;
-
         g->setClipRect(window);
 
         Pos domain_pos = getPos(domain);
