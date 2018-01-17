@@ -10,17 +10,35 @@ void MainWindow::onTimer() {
     series->add(i/100.0, sin(delta*i));
     series2->add(i/100.0, cos(delta*i));
     i++;
-    if(i == 50) {
+    if(i == 25) {
         render->setSeriesColor(render->indexOf(series), Qt::blue, false);
         render->setGridColor(Qt::red);
+        render->setDomainAxis(domain, Pos::TOP);
+    }
+    if(i == 50) {
+        render->setRangeAxis(range, Pos::RIGHT);
+        range->setInvert(false);
+        render->setGridColor(Qt::darkGreen);
+    }
+    if(i == 75) {
+        render->setGridColor(Qt::gray);
+        render->setRangeAxis(range, Pos::LEFT);
+        domain->setInvert(true);
     }
     if(i == 100) {
-        render->setChartColor(Qt::darkGray);
-        render->setGridColor(Qt::gray);
-        render->setBackgroundColor(Qt::black);
-        render->setSeriesColor(0, Qt::white);
-        render->setTickColor(Qt::blue);
-        render->setTickTextColor(Qt::white);
+
+        render->setDomainAxis(domain, Pos::BOTTOM);
+        render->setRangeAxis(range, Pos::LEFT);
+        range->setInvert(true);
+        domain->setInvert(false);
+        render->setChartColor(Qt::darkGray, false);
+        render->setGridColor(Qt::gray, false);
+        render->setBackgroundColor(Qt::black, false);
+        render->setSeriesColor(0, Qt::white, false);
+        render->setTickColor(Qt::gray, false);
+        render->setTickTextColor(Qt::white, false);
+        render->setTitleColor(Qt::white);
+        render->setAxisTextColor(Qt::darkYellow);
     }
     if(i > 50) {
         int v = i % 255;
@@ -73,11 +91,7 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     delete ui;
-    delete domain;
-    delete range;
-    delete series;
-    delete series2;
-    delete render;
+    delete chart;
 }
 
 void MainWindow::on_draw_line_stateChanged(int)

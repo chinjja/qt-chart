@@ -1,6 +1,8 @@
 #ifndef XYSERIES_H
 #define XYSERIES_H
 
+#include <QDebug>
+
 #include <vector>
 #include <limits>
 #include <algorithm>
@@ -48,7 +50,7 @@ class XYSeries {
 private:
     vector<SeriesChangeListener*> listeners;
     vector<XYItem> items;
-    const char* name;
+    QString name;
     bool sorted;
     double min_x;
     double max_x;
@@ -56,9 +58,12 @@ private:
     double max_y;
 
 public:
-    XYSeries(const char* _name, bool _sorted = true)
+    XYSeries(QString _name, bool _sorted = true)
         : name(_name), sorted(_sorted), min_x(0), max_x(0), min_y(0), max_y(0) {
 
+    }
+    ~XYSeries() {
+         qDebug() << "series: " << name << " destroy";
     }
     void add(XYItem item, bool notify = true) {
         if(sorted) {
@@ -116,7 +121,7 @@ public:
     const XYItem& operator[] (int index) const {
         return items[index];
     }
-    const char* getName() const {
+    QString getName() const {
         return name;
     }
     double getMinX() const {

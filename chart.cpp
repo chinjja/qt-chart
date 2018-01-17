@@ -8,6 +8,11 @@ Chart::Chart(QWidget *parent) :
 
 Chart::~Chart()
 {
+    if(render) {
+        render->removeRenderChaggeListener(this);
+        delete render;
+    }
+     qDebug() << "chart view  destroy";
 }
 void Chart::setRender(XYRender* render) {
     this->render = render;

@@ -2,6 +2,7 @@
 #define AXIS_H
 
 #include <QWidget>
+#include <QDebug>
 
 #include "type.h"
 #include "range.h"
@@ -41,6 +42,9 @@ public:
     }
     Axis(QString _name, double min = 0, double max = 1, bool invert = false) : Axis(_name, Range(min, max), invert) {
 
+    }
+    ~Axis() {
+        qDebug() << "axis: " << name << " destroy";
     }
     QString getName() const {
         return name;

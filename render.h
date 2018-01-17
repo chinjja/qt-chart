@@ -58,6 +58,7 @@ private:
     QPoint end_point;
     QRect area;
     QColor title_color;
+    QColor axis_text_color;
     QColor grid_color;
     QColor tick_color;
     QColor tick_text_color;
@@ -106,7 +107,6 @@ private:
     }
 public:
     XYRender(bool _drawShape = true, bool _drawLine = true) :
-
         drawShape(_drawShape),
         drawLine(_drawLine),
         gesture(false),
@@ -114,6 +114,7 @@ public:
         zoom(false),
         grid(true),
         title_color(Qt::black),
+        axis_text_color(Qt::black),
         grid_color(Qt::lightGray),
         tick_color(Qt::black),
         tick_text_color(Qt::black),
@@ -125,7 +126,21 @@ public:
         title_font.setPointSize(18);
         axis_text_font.setPointSize(14);
     }
-    virtual ~XYRender() {}
+    virtual ~XYRender() {
+        if(domain) {
+            domain->removeAxisChangeListener(this);
+            delete domain;
+        }
+        if(range) {
+            range->removeAxisChangeListener(this);
+            delete range;
+        }
+        for(SeriesHolder &holder : series_list) {
+            holder.series->removeSeriesChangeListener(this);
+            delete holder.series;
+        }
+         qDebug() << "render destroy";
+    }
     void setDomainAxis(Axis* axis, Pos pos = BOTTOM) {
         setAxis(&domain, axis, pos);
     }
@@ -183,6 +198,12 @@ public:
     }
     QColor getTitleColor() const {
         return title_color;
+    }
+    void setAxisTextColor(QColor color, bool notify = true) {
+        set_value(axis_text_color, color, notify);
+    }
+    QColor getAxisTextColor() const {
+        return axis_text_color;
     }
     void setTitleFont(QFont font, bool notify = true) {
         set_value(title_font, font, notify);
@@ -301,11 +322,12 @@ public:
             pad_bottom = calcAxisSize(g, domain, Pos::BOTTOM);
             chart_h -= pad_bottom;
         }
+        int title_height = 0;
         if(has_title) {
             g->save();
             g->setFont(title_font);
             QFontMetrics m = g->fontMetrics();
-            int title_height = m.height() + GAP * 2;
+            title_height = m.height() + GAP * 2;
             int title_x = width/2 - m.width(title)/2;
             int title_y = y+GAP+m.height();
             g->setPen(title_color);
@@ -328,7 +350,7 @@ public:
         for(SeriesHolder &holder : series_list) {
             drawSeries(g, holder, chart_x, chart_y, chart_w, chart_h);
         }
-        g->setClipRect(0, 0, widget->width(), widget->height());
+        g->setClipRect(x, y, width, height);
         for(Axis* axis : arr) {
             Pos pos = getPos(axis);
             int axis_x;
@@ -348,6 +370,9 @@ public:
                 axis_y = y+insets.top;
                 axis_w = chart_w;
                 axis_h = pad_top;
+                if(has_title) {
+                    axis_y += title_height;
+                }
                 break;
             case RIGHT:
                 axis_x = x+chart_w+insets.left;
@@ -552,9 +577,9 @@ protected:
         QLineF line;
         if(isDrawLine()) {
             for(int i = 0; i < count; i++) {
-                XYItem item = series->getItem(i);
-
                 if(i == 0) continue;
+
+                XYItem item = series->getItem(i);
                 XYItem prev = series->getItem(i-1);
                 double x1 = domain->value_to_point(prev.x(), area, domain_pos);
                 double y1 = range->value_to_point(prev.y(), area, range_pos);
@@ -589,7 +614,6 @@ protected:
         return v1 - (v2 * div);
     }
     int calcAxisSize(QPainter* g, Axis *axis, Pos pos) {
-        g->save();
         Range axis_range = axis->getRange();
         double delta_value = axis_range.delta();
         double tick_value = delta_value / TICK_DIV;
@@ -605,6 +629,7 @@ protected:
         tick_value = floor(tick_value);
         tick_value /= pow(10, abs(fraction));
 
+        g->save();
         g->setFont(tick_text_font);
         QFontMetrics fm = g->fontMetrics();
         QString str = QString::number(-1, 'f', fraction);
@@ -616,6 +641,7 @@ protected:
         fm = g->fontMetrics();
 
         int axis_text_height = fm.height();
+        g->restore();
 
         switch(pos) {
         case TOP:
@@ -627,7 +653,7 @@ protected:
         default:
             throw 1;
         }
-        g->restore();
+
     }
     void drawAxis(QPainter* g, Axis* axis, Pos pos, int x, int y, int w, int h) {
         QPen pen;
@@ -671,7 +697,6 @@ protected:
             break;
         }
 
-        g->save();
         g->setFont(tick_text_font);
         for(double tick = tick_min; tick <= tick_max + tick_value / 2; tick += tick_value) {
             double point = axis->value_to_point(tick, area, pos);
@@ -739,7 +764,6 @@ protected:
             g->setPen(tick_text_color);
             g->drawText(text_x, text_y, str);
         }
-        g->restore();
 
         g->setPen(pen);
         switch(pos) {
@@ -759,6 +783,7 @@ protected:
 
         g->save();
         QString axis_name = axis->getName();
+        g->setPen(axis_text_color);
         g->setFont(axis_text_font);
         QFontMetrics fm = g->fontMetrics();
         int width = fm.width(axis_name);
