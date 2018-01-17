@@ -34,13 +34,14 @@ private:
     Range range;
     bool auto_range;
     bool invert;
+    bool include_zero;
     vector<AxisChangeListener*> listeners;
 
 public:
-    Axis(QString _name, Range _range, bool _invert = false) : name(_name), range(_range), auto_range(false), invert(_invert) {
+    Axis(QString _name, Range _range, bool _invert = false, bool _include_zero = false) : name(_name), range(_range), auto_range(false), invert(_invert), include_zero(_include_zero) {
 
     }
-    Axis(QString _name, qreal min = 0, qreal max = 1, bool invert = false) : Axis(_name, Range(min, max), invert) {
+    Axis(QString _name, qreal min = 0, qreal max = 1, bool invert = false, bool include_zero = false) : Axis(_name, Range(min, max), invert, include_zero) {
 
     }
     ~Axis() {
@@ -56,42 +57,40 @@ public:
         setRange(Range(min, max), notify);
     }
     void setRange(Range range, bool notify = true) {
-        if(this->range == range) return;
-        this->range = range;
-        if(notify) fire();
+        set_value(this, this->range, range, notify);
     }
     Range getRange() const {
         return range;
     }
-    void setUpper(qreal upper) {
-        setRange(getLower(), upper);
+    void setUpper(qreal upper, bool notify = true) {
+        setRange(getLower(), upper, notify);
     }
     qreal getUpper() const {
         return range.max();
     }
-    void setLower(qreal lower) {
-        setRange(lower, getUpper());
+    void setLower(qreal lower, bool notify = true) {
+        setRange(lower, getUpper(), notify);
     }
     qreal getLower() const {
         return range.min();
     }
-    void setAutoRange(bool auto_range) {
-        if(this->auto_range != auto_range) {
-            this->auto_range = auto_range;
-            fire();
-        }
+    void setAutoRange(bool auto_range, bool notify = true) {
+        set_value(this, this->auto_range, auto_range, notify);
     }
     bool isAutoRange() const {
         return auto_range;
     }
-    void setInvert(bool invert) {
-        if(this->invert != invert) {
-            this->invert = invert;
-            fire();
-        }
+    void setInvert(bool invert, bool notify = true) {
+        set_value(this, this->invert, invert, notify);
     }
     bool isInvert() const {
         return invert;
+    }
+    void setIncludeZero(bool include_zero, bool notify = true) {
+        set_value(this, this->include_zero, include_zero, notify);
+    }
+    bool isIncludeZero() const {
+        return include_zero;
     }
     qreal point_to_value(qreal point, QRectF area, Pos pos) const {
         qreal axis_min = range.min();
@@ -163,7 +162,7 @@ public:
     void removeAxisChangeListener(AxisChangeListener* listener) {
         listeners.erase(find(listeners.begin(), listeners.end(), listener));
     }
-protected:
+public:
     void fire() {
         AxisChangeEvent event(this);
         for(AxisChangeListener* l : listeners) {

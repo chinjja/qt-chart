@@ -183,10 +183,7 @@ public:
     }
     template<class T>
     inline void set_value(T &prev, T &value, bool notify) {
-        if(prev != value) {
-            prev = value;
-            if(notify) fire();
-        }
+        ::set_value(this, prev, value, notify);
     }
     void setSeriesColor(int series, QColor color, bool notify = true) {
         QColor &prev = series_list[series].color;
@@ -449,7 +446,7 @@ public:
         default: throw 1;
         }
     }
-    Range calc_range_bound(Pos pos) {
+    Range calc_range_bound(Axis *axis, Pos pos) {
         if(series_list.empty()) return Range(0, 1);
 
         XYSeries *first = series_list[0].series;
@@ -465,12 +462,14 @@ public:
                 max = series_max(series, pos);
             }
         }
-        return Range(::min(min, max), ::max(min, max));
+        if(min > max) return Range(0, 1);
+
+        return Range(min, max);
     }
     void resetAllAxisRange() {
         zoom = false;
-        domain->setRange(calc_range_bound(getPos(domain)), false);
-        range->setRange(calc_range_bound(getPos(range)), false);
+        domain->setRange(calc_range_bound(domain, getPos(domain)), false);
+        range->setRange(calc_range_bound(range, getPos(range)), false);
         fire();
     }
     void checkLimit(QPoint& point) {
@@ -571,7 +570,17 @@ protected:
     void updateAxisRange(Axis* axis, qreal rate) {
         if(!zoom && axis->isAutoRange()) {
             Pos pos = getPos(axis);
-            Range range = calc_range_bound(pos) * rate;
+
+            Range range = calc_range_bound(axis, pos);
+            if(range.min() == 0) {
+                range = range * rate;
+                range = Range(0, range.max());
+            } else {
+                range = range * rate;
+            }
+            if(axis->isIncludeZero() && range.min() > 0) {
+                range = Range(0, range.max());
+            }
             axis->setRange(range, false);
         }
     }
@@ -850,6 +859,7 @@ protected:
         fire();
     }
 
+public:
     void fire() {
         RenderChangeEvent event(this);
         for(RenderChangeListener* listener : listeners) {

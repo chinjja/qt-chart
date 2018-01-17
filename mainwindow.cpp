@@ -47,8 +47,8 @@ void MainWindow::onTimer() {
     }
     if(i > 50) {
         int v = i % 255;
-        render->setSeriesColor(1, QColor(v, (v + 50) % 255, (v + 100)%255));
-        render->setTitle("Chart Test");
+        render->setSeriesColor(1, QColor(v, (v + 50) % 255, (v + 100)%255), false);
+        render->setTitle("Chart Test", false);
     }
 }
 
@@ -60,7 +60,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     domain = new Axis("Domain Axis", 0, 2*pi);
     domain->setAutoRange(true);
-
+    domain->setIncludeZero(true);
     range = new Axis("Range Axis", -1.5, 1.5);
     range->setAutoRange(true);
 

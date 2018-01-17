@@ -28,8 +28,14 @@ public:
     bool outside(qreal v) const {
         return !inside(v);
     }
-    bool operator == (Range& other) {
+    bool equals(Range& other) const {
         return _min == other._min && _max == other._max;
+    }
+    bool operator == (Range& other) {
+        return equals(other);
+    }
+    bool operator != (Range& other) {
+        return !equals(other);
     }
     Range operator *(qreal rate) {
         qreal half = delta()/2;
