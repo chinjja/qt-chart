@@ -29,17 +29,24 @@ public:
 
 class Axis {
 private:
+    QString name;
     Range range;
     bool auto_range;
     bool invert;
     vector<AxisChangeListener*> listeners;
 
 public:
-    Axis(Range _range, bool _invert = false) : range(_range), auto_range(false), invert(_invert) {
+    Axis(QString _name, Range _range, bool _invert = false) : name(_name), range(_range), auto_range(false), invert(_invert) {
 
     }
-    Axis(double min, double max, bool invert = false) : Axis(Range(min, max), invert) {
+    Axis(QString _name, double min = 0, double max = 1, bool invert = false) : Axis(_name, Range(min, max), invert) {
 
+    }
+    QString getName() const {
+        return name;
+    }
+    void setName(QString name) {
+        this->name = name;
     }
     void setRange(double min, double max, bool notify = true) {
         setRange(Range(min, max), notify);

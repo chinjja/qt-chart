@@ -355,7 +355,7 @@ protected:
 
         QLineF line;
         if(isDrawLine()) {
-            for(size_t i = 0; i < count; i++) {
+            for(int i = 0; i < count; i++) {
                 XYItem item = series->getItem(i);
 
                 if(i == 0) continue;
@@ -372,7 +372,7 @@ protected:
         g->setPen(Qt::NoPen);
         g->setBrush(QBrush(Qt::red));
         if(isDrawShape()) {
-            for(size_t i = 0; i < count; i++) {
+            for(int i = 0; i < count; i++) {
                 XYItem item = series->getItem(i);
                 double x2 = domain->value_to_point(item.x(), area, domain_pos);
                 double y2 = range->value_to_point(item.y(), area, range_pos);
@@ -401,21 +401,6 @@ protected:
         QPen pen;
         pen.setWidth(1.5);
         pen.setColor(Qt::black);
-        g->setPen(pen);
-        switch(pos) {
-        case TOP:
-            g->drawLine(QLineF(x, y+h, x+w, y+h));
-            break;
-        case BOTTOM:
-            g->drawLine(QLineF(x, y, x+w, y));
-            break;
-        case LEFT:
-            g->drawLine(QLineF(x+w, y, x+w, y+h));
-            break;
-        case RIGHT:
-            g->drawLine(QLineF(x, y, x, y+h));
-            break;
-        }
 
         int size = 10;
         Range axis_range = axis->getRange();
@@ -484,23 +469,23 @@ protected:
             switch(pos) {
             case BOTTOM:
                 tick_line.setLine(point, y, point, y+tick_size);
-                text_x = (float)point - str_width/2;
+                text_x = point - str_width/2;
                 text_y = y+str_ascent+text_offset;
                 break;
             case LEFT:
                 tick_line.setLine(x+w-tick_size, point, x+w, point);
                 text_x = x+w-str_width-text_offset;
-                text_y = (float)point + str_descent;
+                text_y = point + str_descent;
                 break;
             case TOP:
                 tick_line.setLine(point, y+h, point, y+h-tick_size);
-                text_x = (float)point - str_width/2;
+                text_x = point - str_width/2;
                 text_y = y+h-text_offset-str_descent;
                 break;
             case RIGHT:
                 tick_line.setLine(x, point, x+tick_size, point);
                 text_x = x + text_offset;
-                text_y = (float)point + str_descent;
+                text_y = point + str_descent;
                 break;
             default: throw 1;
             }
@@ -509,6 +494,52 @@ protected:
             g->setPen(Qt::black);
             g->drawText(text_x, text_y, str);
         }
+
+        g->setPen(pen);
+        switch(pos) {
+        case TOP:
+            g->drawLine(QLineF(x, y+h, x+w, y+h));
+            break;
+        case BOTTOM:
+            g->drawLine(QLineF(x, y, x+w, y));
+            break;
+        case LEFT:
+            g->drawLine(QLineF(x+w, y, x+w, y+h));
+            break;
+        case RIGHT:
+            g->drawLine(QLineF(x, y, x, y+h));
+            break;
+        }
+
+        QString axis_name = axis->getName();
+        QFontMetrics fm = g->fontMetrics();
+        int width = fm.width(axis_name);
+        int ascent = fm.ascent();
+        int descent = fm.descent();
+        switch(pos) {
+        case TOP:
+            g->drawText(x+w/2-width/2, y+ascent, axis_name);
+            break;
+        case BOTTOM:
+            g->drawText(x+w/2-width/2, y+h-descent, axis_name);
+            break;
+        case LEFT:
+            g->save();
+            g->translate(x, y+h/2);
+            g->rotate(-90);
+            g->drawText(-width/2, ascent, axis_name);
+            g->restore();
+            break;
+        case RIGHT:
+            g->save();
+            g->translate(x+w, y+h/2);
+            g->rotate(-90);
+            g->drawText(-width/2, -descent, axis_name);
+            g->restore();
+            break;
+        default: throw 1;
+        }
+
     }
     void onAxisChanged(const AxisChangeEvent*) {
         fire();
