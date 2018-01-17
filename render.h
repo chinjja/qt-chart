@@ -42,23 +42,33 @@ public:
 
 
 private:
-    Axis* domain;
-    Axis* range;
-    QVector<SeriesHolder> series_list;
+
     bool drawShape;
     bool drawLine;
     bool gesture;
-    int mouse;
     bool touch;
     bool zoom;
     bool grid;
-    QPoint start_point;
-    QPoint end_point;
-    QRect area;
-    QVector<RenderChangeListener*> listeners;
+
+    int mouse;
 
     Pos domain_pos;
     Pos range_pos;
+    QPoint start_point;
+    QPoint end_point;
+    QRect area;
+    QColor grid_color;
+    QColor tick_color;
+    QColor tick_text_color;
+    QColor chart_color;
+    QColor bg_color;
+
+    QVector<SeriesHolder> series_list;
+    QVector<RenderChangeListener*> listeners;
+
+    Axis* domain;
+    Axis* range;
+
     void setPos(Axis* axis, Pos setPos) {
         if(axis == domain) domain_pos = setPos;
         else if(axis == range) range_pos = setPos;
@@ -89,14 +99,20 @@ private:
     }
 public:
     XYRender(bool _drawShape = true, bool _drawLine = true) :
-        domain(0),
-        range(0),
+
         drawShape(_drawShape),
         drawLine(_drawLine),
         gesture(false),
         touch(false),
         zoom(false),
-        grid(true) {}
+        grid(true),
+        grid_color(Qt::lightGray),
+        tick_color(Qt::black),
+        tick_text_color(Qt::black),
+        chart_color(Qt::white),
+        bg_color(Qt::lightGray),
+        domain(0),
+        range(0) {}
     virtual ~XYRender() {}
     void setDomainAxis(Axis* axis, Pos pos = BOTTOM) {
         setAxis(&domain, axis, pos);
@@ -130,7 +146,51 @@ public:
     QColor getSeriesColor(int series) const {
         return series_list[series].color;
     }
-
+    void setChartColor(QColor color, bool notify = true) {
+        if(chart_color != color) {
+            chart_color = color;
+            if(notify) fire();
+        }
+    }
+    QColor getChartColor() const {
+        return chart_color;
+    }
+    void setBackgroundColor(QColor color, bool notify = true) {
+        if(bg_color != color) {
+            bg_color = color;
+            if(notify) fire();
+        }
+    }
+    QColor getBackgroundColor() const {
+        return bg_color;
+    }
+    void setGridColor(QColor color, bool notify = true) {
+        if(grid_color != color) {
+            grid_color = color;
+            if(notify) fire();
+        }
+    }
+    QColor getGridColor() const {
+        return grid_color;
+    }
+    void setTickColor(QColor color, bool notify = true) {
+        if(tick_color != color) {
+            tick_color = color;
+            if(notify) fire();
+        }
+    }
+    QColor getTickColor() const {
+        return tick_color;
+    }
+    void setTickTextColor(QColor color, bool notify = true) {
+        if(tick_text_color != color) {
+            tick_text_color = color;
+            if(notify) fire();
+        }
+    }
+    QColor getTickTextColor() const {
+        return tick_text_color;
+    }
     bool contains(XYSeries *series) const {
         return indexOf(series) != -1;
     }
@@ -153,19 +213,19 @@ public:
     bool isDrawLine() {
         return drawLine;
     }
-    void setDrawShape(bool shape) {
+    void setDrawShape(bool shape, bool notify = true) {
         if(this->drawShape != shape) {
             this->drawShape = shape;
-            fire();
+            if(notify) fire();
         }
     }
     bool isDrawShape() {
         return drawShape;
     }
-    void setDrawGrid(bool grid) {
+    void setDrawGrid(bool grid, bool notify = true) {
         if(this->grid != grid) {
             this->grid = grid;
-            fire();
+            if(notify) fire();
         }
     }
     bool isDrawGrid() const {
@@ -182,6 +242,7 @@ public:
         int pad_left = 0;
         int pad_right = 0;
 
+        g->fillRect(QRect(0, 0, widget->width(), widget->height()), bg_color);
         g->setRenderHint(QPainter::Antialiasing);
         Insets insets(10, 10, 10, 10);
         g->setPen(Qt::black);
@@ -212,6 +273,13 @@ public:
         drawBackground(g, x, y, w, h);
 
         Axis* arr[] = { domain, range };
+        for(Axis* axis : arr) {
+            updateAxisRange(axis, 1.05);
+        }
+        for(SeriesHolder &holder : series_list) {
+            drawSeries(g, holder, x, y, w, h);
+        }
+        g->setClipRect(0, 0, widget->width(), widget->height());
         for(Axis* axis : arr) {
             Pos pos = getPos(axis);
             int axis_x;
@@ -246,11 +314,7 @@ public:
                 break;
             default: throw 1;
             }
-            updateAxisRange(axis, 1.05);
             drawAxis(g, axis, pos, axis_x, axis_y, axis_w, axis_h);
-        }
-        for(SeriesHolder &holder : series_list) {
-            drawSeries(g, holder, x, y, w, h);
         }
 
         if(mouse == Qt::LeftButton && gesture) {
@@ -478,7 +542,7 @@ protected:
         return (int)(v*scale-offset);
     }
     void drawBackground(QPainter* g, int x, int y, int w, int h) {
-        g->fillRect(x, y, w, h, Qt::white);
+        g->fillRect(x, y, w, h, chart_color);
     }
     double mod(double v1, double v2) const {
         double div = floor(v1 / v2);
@@ -517,12 +581,9 @@ protected:
         }
     }
     void drawAxis(QPainter* g, Axis* axis, Pos pos, int x, int y, int w, int h) {
-        g->setPen(Qt::yellow);
-        g->drawRect(x, y, w, h);
-
         QPen pen;
-        pen.setWidth(1.5);
-        pen.setColor(Qt::black);
+        pen.setWidth(2);
+        pen.setColor(tick_color);
 
         Range axis_range = axis->getRange();
         double axis_min = axis_range.min();
@@ -594,7 +655,7 @@ protected:
                     grid_line.setLine(area.x(), point, area.x()+area.width(), point);
                     break;
                 }
-                g->setPen(Qt::gray);
+                g->setPen(grid_color);
                 g->drawLine(grid_line);
             }
 
@@ -624,7 +685,7 @@ protected:
             }
             g->setPen(pen);
             g->drawLine(tick_line);
-            g->setPen(Qt::black);
+            g->setPen(tick_text_color);
             g->drawText(text_x, text_y, str);
         }
 

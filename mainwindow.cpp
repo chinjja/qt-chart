@@ -11,7 +11,16 @@ void MainWindow::onTimer() {
     series2->add(i/100.0, cos(delta*i));
     i++;
     if(i == 50) {
-        render->setSeriesColor(render->indexOf(series), Qt::blue);
+        render->setSeriesColor(render->indexOf(series), Qt::blue, false);
+        render->setGridColor(Qt::red);
+    }
+    if(i == 100) {
+        render->setChartColor(Qt::darkGray);
+        render->setGridColor(Qt::gray);
+        render->setBackgroundColor(Qt::black);
+        render->setSeriesColor(0, Qt::white);
+        render->setTickColor(Qt::blue);
+        render->setTickTextColor(Qt::white);
     }
     if(i > 50) {
         int v = i % 255;
