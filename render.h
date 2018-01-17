@@ -244,13 +244,14 @@ public:
     void updateGesture(QPoint point) {
         if(!touch) return;
         end_point = point;
-        checkLimit(end_point);
+
         if(!gesture && sqrt(QPointF::dotProduct(start_point, end_point)) > 15) {
             gesture = true;
         }
         if(!gesture) return;
         switch(mouse) {
         case Qt::LeftButton:
+            checkLimit(end_point);
             fire();
             break;
         case Qt::MiddleButton:
@@ -264,9 +265,9 @@ public:
         gesture = false;
         touch = false;
         end_point = point;
-        checkLimit(end_point);
         switch(mouse) {
         case Qt::LeftButton:
+            checkLimit(end_point);
             if(isPositive(start_point, end_point)) {
                 adjustAxisRange(start_point, end_point);
             } else {
