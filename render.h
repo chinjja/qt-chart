@@ -26,12 +26,15 @@ public:
 
 class XYRender : public SeriesChangeListener, AxisChangeListener{
 public:
-    constexpr static double AXIS_PADDING = 50;
+    constexpr static double TICK_HEIGHT = 5;
+    constexpr static double GAP = 8;
+    constexpr static double TICK_DIV = 10;
+
 
 private:
     Axis* domain;
     Axis* range;
-    XYSeries* series;
+    QVector<XYSeries*> series_list;
     bool drawShape;
     bool drawLine;
     bool gesture;
@@ -42,7 +45,7 @@ private:
     QPoint start_point;
     QPoint end_point;
     QRect area;
-    vector<RenderChangeListener*> listeners;
+    QVector<RenderChangeListener*> listeners;
 
     Pos domain_pos;
     Pos range_pos;
@@ -78,7 +81,6 @@ public:
     XYRender(bool _drawShape = true, bool _drawLine = true) :
         domain(0),
         range(0),
-        series(0),
         drawShape(_drawShape),
         drawLine(_drawLine),
         gesture(false),
@@ -92,13 +94,25 @@ public:
     void setRangeAxis(Axis* axis, Pos pos = LEFT) {
          setAxis(&range, axis, pos);
     }
-    void setSeries(XYSeries* series) {
-        this->series = series;
+    void addSeries(XYSeries* series) {
+        if(!series) throw 1;
+        if(series_list.contains(series)) throw 1;
+        series_list.append(series);
         series->addSeriesChangeListener(this);
         fire();
     }
-    XYSeries* getSeries() const {
-        return series;
+    void removeSeries(XYSeries* series) {
+        if(!series) throw 1;
+        if(series_list.removeOne(series)) {
+            series->removeSeriesChangeListener(this);
+        }
+        fire();
+    }
+    bool contains(XYSeries *series) const {
+        return series_list.contains(series);
+    }
+    XYSeries* getSeries(int index) const {
+        return series_list[index];
     }
     void setDrawLine(bool line) {
         this->drawLine = line;
@@ -129,25 +143,34 @@ public:
         bool has_left = hasPos(LEFT);
         bool has_right = hasPos(RIGHT);
 
+        int pad_top = 0;
+        int pad_bottom = 0;
+        int pad_left = 0;
+        int pad_right = 0;
+
         g->setRenderHint(QPainter::Antialiasing);
         Insets insets(10, 10, 10, 10);
         g->setPen(Qt::black);
         g->drawRect(0, 0, widget->width(), widget->height());
         int x = insets.left;
         if(has_left) {
-            x += AXIS_PADDING;
+            pad_left = calcAxisSize(g, range, Pos::LEFT);
+            x += pad_left;
         }
         int y = insets.top;
         if(has_top) {
-            y += AXIS_PADDING;
+            pad_top = calcAxisSize(g, domain, Pos::TOP);
+            y += pad_top;
         }
         int w = widget->width() - insets.right - x;
         if(has_right) {
-            w -= AXIS_PADDING;
+            pad_right = calcAxisSize(g, range, Pos::RIGHT);
+            w -= pad_right;
         }
         int h = widget->height() - insets.bottom - y;
         if(has_bottom) {
-            h -= AXIS_PADDING;
+            pad_bottom = calcAxisSize(g, domain, Pos::BOTTOM);
+            h -= pad_bottom;
         }
         if(w < 2 || h < 2) return;
         area.setRect(x, y, w, h);
@@ -166,33 +189,35 @@ public:
             case LEFT:
                 axis_x = insets.left;
                 axis_y = y;
-                axis_w = AXIS_PADDING;
+                axis_w = pad_left;
                 axis_h = h;
                 break;
             case TOP:
                 axis_x = x;
                 axis_y = insets.top;
                 axis_w = w;
-                axis_h = AXIS_PADDING;
+                axis_h = pad_top;
                 break;
             case RIGHT:
                 axis_x = insets.left+w;
                 axis_y = y;
-                axis_w = AXIS_PADDING;
+                axis_w = pad_right;
                 axis_h = h;
                 break;
             case BOTTOM:
                 axis_x = x;
                 axis_y = y+h;
                 axis_w = w;
-                axis_h = AXIS_PADDING;
+                axis_h = pad_bottom;
                 break;
             default: throw 1;
             }
             updateAxisRange(axis, 1.05);
             drawAxis(g, axis, pos, axis_x, axis_y, axis_w, axis_h);
         }
-        drawSeries(g, x, y, w, h);
+        for(XYSeries *series : series_list) {
+            drawSeries(g, series, x, y, w, h);
+        }
 
         if(mouse == Qt::LeftButton && gesture) {
             QPoint tl = this->start_point;
@@ -213,10 +238,64 @@ public:
     void removeRenderChaggeListener(RenderChangeListener* listener) {
         listeners.erase(find(listeners.begin(), listeners.end(), listener));
     }
+    double min_x() {
+        if(series_list.empty()) return 0;
+
+        XYSeries *first = series_list[0];
+        double min_x = first->getMinX();
+
+        for(int i = 1; i < series_list.size(); i++) {
+            XYSeries *series = series_list[i];
+            if(series->getMinX() < min_x) {
+                min_x = series->getMinX();
+            }
+        }
+        return min_x;
+    }
+    double series_min(XYSeries *series, Pos pos) {
+        switch(pos) {
+        case TOP:
+        case BOTTOM:
+            return series->getMinX();
+        case LEFT:
+        case RIGHT:
+            return series->getMinY();
+        default: throw 1;
+        }
+    }
+    double series_max(XYSeries *series, Pos pos) {
+        switch(pos) {
+        case TOP:
+        case BOTTOM:
+            return series->getMaxX();
+        case LEFT:
+        case RIGHT:
+            return series->getMaxY();
+        default: throw 1;
+        }
+    }
+    Range calc_range_bound(Pos pos) {
+        if(series_list.empty()) return Range(0, 1);
+
+        XYSeries *first = series_list[0];
+        double min = series_min(first, pos);
+        double max = series_max(first, pos);
+
+        for(int i = 1; i < series_list.size(); i++) {
+            XYSeries *series = series_list[i];
+            if(series_min(series, pos) < min) {
+                min = series_min(series, pos);
+            }
+            if(series_max(series, pos) > max) {
+                max = series_max(series, pos);
+            }
+        }
+        return Range(min, max);
+    }
     void resetAllAxisRange() {
         zoom = false;
-        domain->setRange(series->getMinX(), series->getMaxX(), false);
-        range->setRange(series->getMinY(), series->getMaxY(), false);
+        domain->setRange(calc_range_bound(getPos(domain)), false);
+        range->setRange(calc_range_bound(getPos(range)), false);
         fire();
     }
     void checkLimit(QPoint& point) {
@@ -312,35 +391,11 @@ protected:
     void updateAxisRange(Axis* axis, double rate) {
         if(!zoom && axis->isAutoRange()) {
             Pos pos = getPos(axis);
-            double min;
-            double max;
-            if(series->empty()) {
-                min = 0;
-                max = 1;
-            } else {
-                switch(pos) {
-                case TOP:
-                case BOTTOM:
-                    min = series->getMinX() * rate;
-                    max = series->getMaxX() * rate;
-                    break;
-                case LEFT:
-                case RIGHT:
-                    min = series->getMinY() * rate;
-                    max = series->getMaxY() * rate;
-                    break;
-                default:
-                    throw 1;
-                }
-            }
-            Range range(min, max);
-            if(range.delta() == 0) {
-                range = Range(min, min+1);
-            }
+            Range range = calc_range_bound(pos) * rate;
             axis->setRange(range, false);
         }
     }
-    void drawSeries(QPainter* g, int x, int y, int w, int h) {
+    void drawSeries(QPainter* g, XYSeries *series, int x, int y, int w, int h) {
         size_t count = series->getCount();
         if(count == 0) return;
 
@@ -393,9 +448,39 @@ protected:
         double div = floor(v1 / v2);
         return v1 - (v2 * div);
     }
-    void drawAxis(QPainter* g, Axis* axis, Pos pos, int x, int y, int w, int h) {
-        int tick_size = 5;
+    int calcAxisSize(QPainter* g, Axis *axis, Pos pos) {
+        Range axis_range = axis->getRange();
+        double delta_value = axis_range.delta();
+        double tick_value = delta_value / TICK_DIV;
 
+        int fraction = 0;
+        double l = log10(tick_value);
+        if(l < 0) {
+            l = abs(floor(l));
+            tick_value *= pow(10, l);
+
+            fraction = round(l);
+        }
+        tick_value = floor(tick_value);
+        tick_value /= pow(10, abs(fraction));
+
+        QFontMetrics fm = g->fontMetrics();
+        QString str = QString::number(-1, 'f', fraction);
+
+        int str_width = fm.width(str);
+        int str_height = fm.height();
+        switch(pos) {
+        case TOP:
+        case BOTTOM:
+            return TICK_HEIGHT + GAP + str_height + GAP + str_height;
+        case LEFT:
+        case RIGHT:
+            return TICK_HEIGHT + GAP + str_width + GAP + str_height;
+        default:
+            throw 1;
+        }
+    }
+    void drawAxis(QPainter* g, Axis* axis, Pos pos, int x, int y, int w, int h) {
         g->setPen(Qt::yellow);
         g->drawRect(x, y, w, h);
 
@@ -403,12 +488,11 @@ protected:
         pen.setWidth(1.5);
         pen.setColor(Qt::black);
 
-        int size = 10;
         Range axis_range = axis->getRange();
         double axis_min = axis_range.min();
         double axis_max = axis_range.max();
         double delta_value = axis_range.delta();
-        double tick_value = delta_value / size;
+        double tick_value = delta_value / TICK_DIV;
 
         int fraction = 0;
 
@@ -428,6 +512,18 @@ protected:
         double m = mod(axis_min, tick_value);
         double tick_min = axis_min - m;
         double tick_max = axis_max - m;
+
+        switch(pos) {
+        case TOP:
+        case BOTTOM:
+            double tick_width = abs(axis->value_to_point(tick_value, area, pos) - axis->value_to_point(0, area, pos));
+            QString str2 = QString::number(-1, 'f', fraction);
+            int tick_value_width = g->fontMetrics().width(str2) + GAP;
+            if(tick_width < tick_value_width) {
+                tick_value = abs(axis->point_to_value(tick_value_width, area, pos) - axis->point_to_value(0, area, pos));
+            }
+            break;
+        }
 
         for(double tick = tick_min; tick <= tick_max + tick_value / 2; tick += tick_value) {
             double point = axis->value_to_point(tick, area, pos);
@@ -466,25 +562,25 @@ protected:
                 g->drawLine(grid_line);
             }
 
-            double text_offset = tick_size + 8;
+            double text_offset = TICK_HEIGHT + GAP;
             switch(pos) {
             case BOTTOM:
-                tick_line.setLine(point, y, point, y+tick_size);
+                tick_line.setLine(point, y, point, y+TICK_HEIGHT);
                 text_x = point - str_width/2;
                 text_y = y+str_ascent+text_offset;
                 break;
             case LEFT:
-                tick_line.setLine(x+w-tick_size, point, x+w, point);
+                tick_line.setLine(x+w-TICK_HEIGHT, point, x+w, point);
                 text_x = x+w-str_width-text_offset;
                 text_y = point + str_descent;
                 break;
             case TOP:
-                tick_line.setLine(point, y+h, point, y+h-tick_size);
+                tick_line.setLine(point, y+h, point, y+h-TICK_HEIGHT);
                 text_x = point - str_width/2;
                 text_y = y+h-text_offset-str_descent;
                 break;
             case RIGHT:
-                tick_line.setLine(x, point, x+tick_size, point);
+                tick_line.setLine(x, point, x+TICK_HEIGHT, point);
                 text_x = x + text_offset;
                 text_y = point + str_descent;
                 break;

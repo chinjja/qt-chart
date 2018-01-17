@@ -7,7 +7,8 @@ double delta = 2*pi / 200;
 int i = 0;
 
 void MainWindow::onTimer() {
-    render->getSeries()->add(i/100.0, sin(delta*i));
+    series->add(i/100.0, sin(delta*i));
+    series2->add(i/100.0, cos(delta*i));
     i++;
 }
 
@@ -23,20 +24,22 @@ MainWindow::MainWindow(QWidget *parent) :
     range = new Axis("Range Axis", -1.5, 1.5, true);
     range->setAutoRange(true);
 
-    series = new XYSeries("hello");
+    series = new XYSeries("sin");
+    series2 = new XYSeries("cos");
 
     render = new XYRender();
     render->setDomainAxis(domain);
     render->setRangeAxis(range);
-    render->setSeries(series);
+    render->addSeries(series);
+    render->addSeries(series2);
 
     chart = new Chart();
     chart->setRender(render);
 
     ui->horizontalLayout->addWidget(chart, 1);
 
-    timer.setInterval(100);
-    timer.start(100);
+    timer.setInterval(50);
+    timer.start(50);
 
     connect(&timer, SIGNAL(timeout()), this, SLOT(onTimer()));
 
@@ -55,6 +58,7 @@ MainWindow::~MainWindow()
     delete domain;
     delete range;
     delete series;
+    delete series2;
     delete render;
 }
 

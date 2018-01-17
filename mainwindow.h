@@ -25,6 +25,7 @@ private:
     Axis *domain;
     Axis *range;
     XYSeries *series;
+    XYSeries *series2;
     XYRender *render;
     QTimer timer;
     QStringList pos_x_list;

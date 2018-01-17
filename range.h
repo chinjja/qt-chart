@@ -30,6 +30,9 @@ public:
     bool operator == (Range& other) {
         return _min == other._min && _max == other._max;
     }
+    Range operator *(double rate) {
+        return Range(_min * rate, _max * rate);
+    }
 };
 
 #endif // RANGE_H
