@@ -99,6 +99,9 @@ public:
 
         double area_min;
         double area_max;
+
+        bool ivt = isInvert();
+
         switch(pos) {
         case TOP:
         case BOTTOM:
@@ -107,6 +110,7 @@ public:
             break;
         case LEFT:
         case RIGHT:
+            ivt = !ivt;
             area_min = area.y();
             area_max = area.y() + area.height();
             break;
@@ -114,7 +118,7 @@ public:
         double axis_delta = axis_max - axis_min;
         double area_delta = area_max - area_min;
         double rate = axis_delta / area_delta;
-        if(isInvert()) {
+        if(ivt) {
             return (area_max - point) * rate + axis_min;
         } else {
             return (point - area_min) * rate + axis_min;
@@ -126,6 +130,9 @@ public:
 
         double area_min = 0;
         double area_max = 0;
+
+        bool ivt = isInvert();
+
         switch(pos) {
         case TOP:
         case BOTTOM:
@@ -134,6 +141,7 @@ public:
             break;
         case LEFT:
         case RIGHT:
+            ivt = !ivt;
             area_min = area.y();
             area_max = area.y() + area.height();
             break;
@@ -142,7 +150,7 @@ public:
         double area_delta = area_max - area_min;
         double rate =  area_delta / axis_delta;
 
-        if(isInvert()) {
+        if(ivt) {
             return (axis_max - value) * rate + area_min;
         } else {
             return (value - axis_min) * rate + area_min;

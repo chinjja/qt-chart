@@ -56,7 +56,7 @@ MainWindow::MainWindow(QWidget *parent) :
     domain = new Axis("Domain Axis", 0, 2*pi);
     domain->setAutoRange(true);
 
-    range = new Axis("Range Axis", -1.5, 1.5, true);
+    range = new Axis("Range Axis", -1.5, 1.5);
     range->setAutoRange(true);
 
     series = new XYSeries("sin");
