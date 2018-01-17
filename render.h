@@ -465,7 +465,7 @@ public:
                 max = series_max(series, pos);
             }
         }
-        return Range(min, max);
+        return Range(::min(min, max), ::max(min, max));
     }
     void resetAllAxisRange() {
         zoom = false;

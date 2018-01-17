@@ -60,7 +60,7 @@ private:
 public:
     XYSeries(QString _name, bool _sorted = true)
         : name(_name), sorted(_sorted), min_x(0), max_x(0), min_y(0), max_y(0) {
-
+        clearLimit();
     }
     ~XYSeries() {
          qDebug() << "series: " << name << " destroy";

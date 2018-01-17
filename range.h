@@ -32,7 +32,10 @@ public:
         return _min == other._min && _max == other._max;
     }
     Range operator *(qreal rate) {
-        return Range(_min * rate, _max * rate);
+        qreal half = delta()/2;
+        qreal cent = _min + half;
+        half *= rate;
+        return Range(cent-half, cent+half);
     }
 };
 
