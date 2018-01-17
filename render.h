@@ -63,6 +63,9 @@ private:
     QColor chart_color;
     QColor bg_color;
 
+    QFont tick_text_font;
+    QFont axis_text_font;
+
     QVector<SeriesHolder> series_list;
     QVector<RenderChangeListener*> listeners;
 
@@ -111,6 +114,8 @@ public:
         tick_text_color(Qt::black),
         chart_color(Qt::white),
         bg_color(Qt::lightGray),
+        tick_text_font(QFont("Times")),
+        axis_text_font(QFont("Times", 14)),
         domain(0),
         range(0) {}
     virtual ~XYRender() {}
@@ -136,61 +141,6 @@ public:
         series->removeSeriesChangeListener(this);
         fire();
     }
-    void setSeriesColor(int series, QColor color, bool notify = true) {
-        QColor &prev = series_list[series].color;
-        if(prev != color) {
-            prev = color;
-            if(notify) fire();
-        }
-    }
-    QColor getSeriesColor(int series) const {
-        return series_list[series].color;
-    }
-    void setChartColor(QColor color, bool notify = true) {
-        if(chart_color != color) {
-            chart_color = color;
-            if(notify) fire();
-        }
-    }
-    QColor getChartColor() const {
-        return chart_color;
-    }
-    void setBackgroundColor(QColor color, bool notify = true) {
-        if(bg_color != color) {
-            bg_color = color;
-            if(notify) fire();
-        }
-    }
-    QColor getBackgroundColor() const {
-        return bg_color;
-    }
-    void setGridColor(QColor color, bool notify = true) {
-        if(grid_color != color) {
-            grid_color = color;
-            if(notify) fire();
-        }
-    }
-    QColor getGridColor() const {
-        return grid_color;
-    }
-    void setTickColor(QColor color, bool notify = true) {
-        if(tick_color != color) {
-            tick_color = color;
-            if(notify) fire();
-        }
-    }
-    QColor getTickColor() const {
-        return tick_color;
-    }
-    void setTickTextColor(QColor color, bool notify = true) {
-        if(tick_text_color != color) {
-            tick_text_color = color;
-            if(notify) fire();
-        }
-    }
-    QColor getTickTextColor() const {
-        return tick_text_color;
-    }
     bool contains(XYSeries *series) const {
         return indexOf(series) != -1;
     }
@@ -204,34 +154,91 @@ public:
     XYSeries* getSeries(int index) const {
         return series_list[index].series;
     }
-    void setDrawLine(bool line) {
-        if(this->drawLine != line) {
-            this->drawLine = line;
-            fire();
+    int getSeriesCount() const {
+        return series_list.size();
+    }
+    template<class T>
+    inline void set_value(T &prev, T &value, bool notify) {
+        if(prev != value) {
+            prev = value;
+            if(notify) fire();
         }
+    }
+    void setSeriesColor(int series, QColor color, bool notify = true) {
+        QColor &prev = series_list[series].color;
+        set_value(prev, color, notify);
+    }
+    QColor getSeriesColor(int series) const {
+        return series_list[series].color;
+    }
+    void setChartColor(QColor color, bool notify = true) {
+        set_value(chart_color, color, notify);
+    }
+    QColor getChartColor() const {
+        return chart_color;
+    }
+    void setBackgroundColor(QColor color, bool notify = true) {
+        set_value(bg_color, color, notify);
+    }
+    QColor getBackgroundColor() const {
+        return bg_color;
+    }
+    void setGridColor(QColor color, bool notify = true) {
+        set_value(grid_color, color, notify);
+    }
+    QColor getGridColor() const {
+        return grid_color;
+    }
+    void setTickColor(QColor color, bool notify = true) {
+        set_value(tick_color, color, notify);
+    }
+    QColor getTickColor() const {
+        return tick_color;
+    }
+    void setTickTextColor(QColor color, bool notify = true) {
+        set_value(tick_text_color, color, notify);
+    }
+    QColor getTickTextColor() const {
+        return tick_text_color;
+    }
+    void setTickTextFont(QFont font, bool notify = true) {
+        set_value(tick_text_font, font, notify);
+    }
+    QFont getTickTextFont() const {
+        return tick_text_font;
+    }
+    void setAxisTextFont(QFont font, bool notify = true) {
+        set_value(axis_text_font, font, notify);
+    }
+    QFont getAxisTextFont() const {
+        return axis_text_font;
+    }
+    void setDrawLine(bool line, bool notify = true) {
+        set_value(drawLine, line, notify);
     }
     bool isDrawLine() {
         return drawLine;
     }
     void setDrawShape(bool shape, bool notify = true) {
-        if(this->drawShape != shape) {
-            this->drawShape = shape;
-            if(notify) fire();
-        }
+        set_value(this->drawShape, shape, notify);
     }
     bool isDrawShape() {
         return drawShape;
     }
     void setDrawGrid(bool grid, bool notify = true) {
-        if(this->grid != grid) {
-            this->grid = grid;
-            if(notify) fire();
-        }
+        set_value(this->grid, grid, notify);
     }
     bool isDrawGrid() const {
         return grid;
     }
     void paint(QPainter *g, QWidget* widget) {
+        int x = 0;
+        int y = 0;
+        int width = widget->width();
+        int height = widget->height();
+
+        if(width < 2 || height < 2) return;
+
         bool has_top = hasPos(TOP);
         bool has_bottom = hasPos(BOTTOM);
         bool has_left = hasPos(LEFT);
@@ -242,42 +249,43 @@ public:
         int pad_left = 0;
         int pad_right = 0;
 
-        g->fillRect(QRect(0, 0, widget->width(), widget->height()), bg_color);
         g->setRenderHint(QPainter::Antialiasing);
         Insets insets(10, 10, 10, 10);
         g->setPen(Qt::black);
-        g->drawRect(0, 0, widget->width(), widget->height());
-        int x = insets.left;
+        g->setBrush(bg_color);
+        g->drawRect(x, y, width, height);
+
+        int chart_x = insets.left;
         if(has_left) {
             pad_left = calcAxisSize(g, range, Pos::LEFT);
-            x += pad_left;
+            chart_x += pad_left;
         }
-        int y = insets.top;
+        int chart_y = insets.top;
         if(has_top) {
             pad_top = calcAxisSize(g, domain, Pos::TOP);
-            y += pad_top;
+            chart_y += pad_top;
         }
-        int w = widget->width() - insets.right - x;
+        int chart_w = widget->width() - insets.right - chart_x;
         if(has_right) {
             pad_right = calcAxisSize(g, range, Pos::RIGHT);
-            w -= pad_right;
+            chart_w -= pad_right;
         }
-        int h = widget->height() - insets.bottom - y;
+        int chart_h = widget->height() - insets.bottom - chart_y;
         if(has_bottom) {
             pad_bottom = calcAxisSize(g, domain, Pos::BOTTOM);
-            h -= pad_bottom;
+            chart_h -= pad_bottom;
         }
-        if(w < 2 || h < 2) return;
-        area.setRect(x, y, w, h);
 
-        drawBackground(g, x, y, w, h);
+        area.setRect(chart_x, chart_y, chart_w, chart_h);
+
+        drawBackground(g, chart_x, chart_y, chart_w, chart_h);
 
         Axis* arr[] = { domain, range };
         for(Axis* axis : arr) {
             updateAxisRange(axis, 1.05);
         }
         for(SeriesHolder &holder : series_list) {
-            drawSeries(g, holder, x, y, w, h);
+            drawSeries(g, holder, chart_x, chart_y, chart_w, chart_h);
         }
         g->setClipRect(0, 0, widget->width(), widget->height());
         for(Axis* axis : arr) {
@@ -290,26 +298,26 @@ public:
             switch(pos) {
             case LEFT:
                 axis_x = insets.left;
-                axis_y = y;
+                axis_y = chart_y;
                 axis_w = pad_left;
-                axis_h = h;
+                axis_h = chart_h;
                 break;
             case TOP:
-                axis_x = x;
+                axis_x = chart_x;
                 axis_y = insets.top;
-                axis_w = w;
+                axis_w = chart_w;
                 axis_h = pad_top;
                 break;
             case RIGHT:
-                axis_x = insets.left+w;
-                axis_y = y;
+                axis_x = insets.left+chart_w;
+                axis_y = chart_y;
                 axis_w = pad_right;
-                axis_h = h;
+                axis_h = chart_h;
                 break;
             case BOTTOM:
-                axis_x = x;
-                axis_y = y+h;
-                axis_w = w;
+                axis_x = chart_x;
+                axis_y = chart_y+chart_h;
+                axis_w = chart_w;
                 axis_h = pad_bottom;
                 break;
             default: throw 1;
@@ -335,20 +343,6 @@ public:
     }
     void removeRenderChaggeListener(RenderChangeListener* listener) {
         listeners.erase(find(listeners.begin(), listeners.end(), listener));
-    }
-    double min_x() {
-        if(series_list.empty()) return 0;
-
-        XYSeries *first = series_list[0].series;
-        double min_x = first->getMinX();
-
-        for(int i = 1; i < series_list.size(); i++) {
-            XYSeries *series = series_list[i].series;
-            if(series->getMinX() < min_x) {
-                min_x = series->getMinX();
-            }
-        }
-        return min_x;
     }
     inline double series_min(XYSeries *series, Pos pos) {
         switch(pos) {
@@ -422,8 +416,11 @@ public:
         if(!touch) return;
         end_point = point;
 
-        if(!gesture && sqrt(QPointF::dotProduct(start_point, end_point)) > 15) {
-            gesture = true;
+        if(!gesture) {
+            QPoint diff = end_point - start_point;
+            if(sqrt(pow(diff.x(), 2) + pow(diff.y(), 2)) > 20) {
+                gesture = true;
+            }
         }
         if(!gesture) return;
         switch(mouse) {
@@ -439,9 +436,11 @@ public:
     }
     void endGesture(QPoint point) {
         if(!touch) return;
+        bool g = gesture;
         gesture = false;
         touch = false;
         end_point = point;
+        if(!g) return;
         switch(mouse) {
         case Qt::LeftButton:
             checkLimit(end_point);
@@ -549,6 +548,7 @@ protected:
         return v1 - (v2 * div);
     }
     int calcAxisSize(QPainter* g, Axis *axis, Pos pos) {
+        g->save();
         Range axis_range = axis->getRange();
         double delta_value = axis_range.delta();
         double tick_value = delta_value / TICK_DIV;
@@ -564,21 +564,29 @@ protected:
         tick_value = floor(tick_value);
         tick_value /= pow(10, abs(fraction));
 
+        g->setFont(tick_text_font);
         QFontMetrics fm = g->fontMetrics();
         QString str = QString::number(-1, 'f', fraction);
 
-        int str_width = fm.width(str);
-        int str_height = fm.height();
+        int tick_text_width = fm.width(str);
+        int tick_text_height = fm.height();
+
+        g->setFont(axis_text_font);
+        fm = g->fontMetrics();
+
+        int axis_text_height = fm.height();
+
         switch(pos) {
         case TOP:
         case BOTTOM:
-            return TICK_HEIGHT + GAP + str_height + GAP + str_height;
+            return TICK_HEIGHT + GAP + tick_text_height + GAP + axis_text_height;
         case LEFT:
         case RIGHT:
-            return TICK_HEIGHT + GAP + str_width + GAP + str_height;
+            return TICK_HEIGHT + GAP + tick_text_width + GAP + axis_text_height;
         default:
             throw 1;
         }
+        g->restore();
     }
     void drawAxis(QPainter* g, Axis* axis, Pos pos, int x, int y, int w, int h) {
         QPen pen;
@@ -622,6 +630,8 @@ protected:
             break;
         }
 
+        g->save();
+        g->setFont(tick_text_font);
         for(double tick = tick_min; tick <= tick_max + tick_value / 2; tick += tick_value) {
             double point = axis->value_to_point(tick, area, pos);
 
@@ -688,6 +698,7 @@ protected:
             g->setPen(tick_text_color);
             g->drawText(text_x, text_y, str);
         }
+        g->restore();
 
         g->setPen(pen);
         switch(pos) {
@@ -705,7 +716,9 @@ protected:
             break;
         }
 
+        g->save();
         QString axis_name = axis->getName();
+        g->setFont(axis_text_font);
         QFontMetrics fm = g->fontMetrics();
         int width = fm.width(axis_name);
         int ascent = fm.ascent();
@@ -718,22 +731,18 @@ protected:
             g->drawText(x+w/2-width/2, y+h-descent, axis_name);
             break;
         case LEFT:
-            g->save();
             g->translate(x, y+h/2);
             g->rotate(-90);
             g->drawText(-width/2, ascent, axis_name);
-            g->restore();
             break;
         case RIGHT:
-            g->save();
             g->translate(x+w, y+h/2);
             g->rotate(-90);
             g->drawText(-width/2, -descent, axis_name);
-            g->restore();
             break;
         default: throw 1;
         }
-
+        g->restore();
     }
     void onAxisChanged(const AxisChangeEvent*) {
         fire();
